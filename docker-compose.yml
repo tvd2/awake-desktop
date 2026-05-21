@@ -1,0 +1,7 @@
+services:
+  keep-awake:
+    build: .
+    container_name: keep-awake
+    restart: unless-stopped
+    ports:
+      - "8787:80"
