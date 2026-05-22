@@ -284,7 +284,11 @@ async function handleApi(req, res, url) {
       { id: "sf-dronezone", title: "SomaFM — Drone Zone", description: "Ambient and atmospheric", playlists: [{ url: "http://ice1.somafm.com/dronezone-128-mp3", format: "mp3" }] },
       { id: "sf-secretagent", title: "SomaFM — Secret Agent", description: "Downtempo spy music", playlists: [{ url: "http://ice1.somafm.com/secretagent-128-mp3", format: "mp3" }] },
       { id: "sf-bootliquor", title: "SomaFM — Boot Liquor", description: "Americana and alt-country", playlists: [{ url: "http://ice1.somafm.com/bootliquor-128-mp3", format: "mp3" }] },
-      { id: "sf-poptron", title: "SomaFM — PopTron", description: "Indie pop and electro", playlists: [{ url: "http://ice1.somafm.com/poptron-128-mp3", format: "mp3" }] }
+      { id: "sf-poptron", title: "SomaFM — PopTron", description: "Indie pop and electro", playlists: [{ url: "http://ice1.somafm.com/poptron-128-mp3", format: "mp3" }] },
+      { id: "fip", title: "FIP Radio", description: "Eclectic mix from France (no ads)", playlists: [{ url: "https://icecast.radiofrance.fr/fip-midfi.mp3", format: "mp3" }] },
+      { id: "kexp", title: "KEXP Seattle", description: "Indie and alternative", playlists: [{ url: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", format: "mp3" }] },
+      { id: "mpr-peaceful", title: "MPR — Peaceful Piano", description: "Ambient solo piano", playlists: [{ url: "https://peacefulpiano.stream.publicradio.org/peacefulpiano.aac", format: "aac" }] },
+      { id: "mpr-relax", title: "MPR — Relax", description: "Ambient and atmospheric", playlists: [{ url: "https://relax.stream.publicradio.org/relax.mp3", format: "mp3" }] }
     ]);
     return;
   }
@@ -319,7 +323,7 @@ async function serveStatic(res, pathname) {
   const resolved = path.resolve(root, path.join(".", path.normalize(requested)));
   if (!resolved.startsWith(root + path.sep) && resolved !== root) { res.writeHead(403); res.end("Forbidden"); return; }
   const content = await readFile(resolved);
-  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
+  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com https://icecast.radiofrance.fr https://kexp-mp3-128.streamguys1.com https://*.stream.publicradio.org; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
   res.end(content);
 }
 http.createServer(async (req, res) => {

@@ -31,6 +31,7 @@ const radioPause = document.querySelector("#radioPause");
 const radioMute = document.querySelector("#radioMute");
 const muteIcon = document.querySelector("#muteIcon");
 const radioGenre = document.querySelector("#radioChannel");
+const radioReset = document.querySelector("#radioReset");
 const radioStatus = document.querySelector("#radioStatus");
 
 let wakeLock = null;
@@ -50,6 +51,10 @@ let isLoadingWeather = false;
 let shouldReloadNewsAfter = false;
 let radioChannels = [];
 let currentChannelIndex = 0;
+let playingChannelIndex = -1;
+let radioRetryCount = 0;
+let radioRetryTimer = null;
+let radioUserStopped = false;
 
 const supportedLocalCountries = ["AU", "US", "GB", "NZ", "CA"];
 
@@ -555,6 +560,7 @@ async function loadRadioChannels() {
       });
       radioStatus.textContent = channels.length + " stations ready.";
       currentChannelIndex = 0;
+      syncRadioButtons();
     } else {
       radioStatus.textContent = "No radio channels available.";
     }
@@ -580,6 +586,45 @@ function resolveStreamUrl(url) {
   return url;
 }
 
+function attemptReconnect() {
+  if (radioUserStopped || radioRetryCount >= 5) {
+    radioStatus.textContent = "Stream disconnected. Press Play to retry.";
+    syncRadioButtons();
+    return;
+  }
+  radioRetryCount++;
+  const delay = Math.min(radioRetryCount * 2000, 10000);
+  radioStatus.textContent = "Reconnecting in " + (delay / 1000) + "s...";
+  syncRadioButtons();
+  radioRetryTimer = setTimeout(() => {
+    playRadio();
+  }, delay);
+}
+
+function syncRadioButtons() {
+  const isPlaying = radioAudio && !radioAudio.paused && radioAudio.src;
+  const hasPlayed = playingChannelIndex !== -1;
+  const isDropdownMatch = currentChannelIndex === playingChannelIndex;
+
+  if (isPlaying && isDropdownMatch) {
+    radioPlay.hidden = true;
+    radioPause.hidden = false;
+    radioReset.hidden = true;
+  } else if (!isPlaying && isDropdownMatch) {
+    radioPlay.hidden = false;
+    radioPause.hidden = true;
+    radioReset.hidden = true;
+  } else if (hasPlayed) {
+    radioPlay.hidden = false;
+    radioPause.hidden = true;
+    radioReset.hidden = false;
+  } else {
+    radioPlay.hidden = false;
+    radioPause.hidden = true;
+    radioReset.hidden = true;
+  }
+}
+
 function playRadio() {
   if (!radioChannels.length || !radioAudio) return;
   const channel = radioChannels[currentChannelIndex];
@@ -587,11 +632,13 @@ function playRadio() {
     radioStatus.textContent = "No stream available.";
     return;
   }
+  radioUserStopped = false;
+  clearTimeout(radioRetryTimer);
+  radioRetryTimer = null;
   destroyHls();
   radioAudio.src = "";
   radioStatus.textContent = "Connecting...";
-  radioPlay.hidden = true;
-  if (radioPause) radioPause.hidden = true;
+  syncRadioButtons();
 
   const playlist = channel.playlists[0];
   const isHLS = playlist.format === "hls" || playlist.url.endsWith(".m3u8");
@@ -602,50 +649,56 @@ function playRadio() {
     hls.loadSource(playlist.url);
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       radioAudio.play().then(() => {
-        if (radioPause) radioPause.hidden = false;
+        playingChannelIndex = currentChannelIndex;
+        radioRetryCount = 0;
         radioStatus.textContent = "playing " + channel.title;
+        syncRadioButtons();
       }).catch(() => {
         radioStatus.textContent = "Playback blocked.";
-        radioPlay.hidden = false;
-        if (radioPause) radioPause.hidden = true;
+        syncRadioButtons();
       });
     });
     hls.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal) {
         radioStatus.textContent = "Stream unavailable.";
-        radioPlay.hidden = false;
-        if (radioPause) radioPause.hidden = true;
+        syncRadioButtons();
         destroyHls();
+        attemptReconnect();
       }
     });
   } else {
     radioAudio.src = resolveStreamUrl(playlist.url);
     radioAudio.play().then(() => {
-      if (radioPause) radioPause.hidden = false;
+      playingChannelIndex = currentChannelIndex;
+      radioRetryCount = 0;
       radioStatus.textContent = "playing " + channel.title;
+      syncRadioButtons();
     }).catch(() => {
       radioStatus.textContent = "Playback blocked.";
-      radioPlay.hidden = false;
-      if (radioPause) radioPause.hidden = true;
+      syncRadioButtons();
     });
   }
 }
 
 function stopRadio() {
   if (!radioAudio) return;
+  radioUserStopped = true;
+  clearTimeout(radioRetryTimer);
+  radioRetryTimer = null;
   destroyHls();
   radioAudio.pause();
   radioAudio.src = "";
-  radioPlay.hidden = false;
-  if (radioPause) radioPause.hidden = true;
+  syncRadioButtons();
   radioStatus.textContent = "Stopped";
 }
 
 function pauseRadio() {
   if (!radioAudio) return;
+  radioUserStopped = true;
+  clearTimeout(radioRetryTimer);
+  radioRetryTimer = null;
   radioAudio.pause();
-  radioPlay.hidden = false;
-  if (radioPause) radioPause.hidden = true;
+  syncRadioButtons();
   radioStatus.textContent = "Paused";
 }
 
@@ -711,8 +764,28 @@ radioGenre.addEventListener("change", () => {
   const channel = radioChannels[currentChannelIndex];
   if (channel) {
     radioStatus.textContent = "Selected: " + channel.title;
+    syncRadioButtons();
   }
 });
+
+radioReset.addEventListener("click", () => {
+  if (playingChannelIndex === -1) return;
+  currentChannelIndex = playingChannelIndex;
+  radioGenre.value = String(currentChannelIndex);
+  syncRadioButtons();
+});
+
+if (radioAudio) {
+  radioAudio.addEventListener("error", () => {
+    if (!radioUserStopped) attemptReconnect();
+  });
+  radioAudio.addEventListener("ended", () => {
+    if (!radioUserStopped) attemptReconnect();
+  });
+  radioAudio.addEventListener("stalled", () => {
+    if (!radioUserStopped) attemptReconnect();
+  });
+}
 
 function onCategoryClick(button) {
   activeCategory = button.dataset.category;

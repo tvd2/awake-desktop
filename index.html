@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=15">
+    <link rel="stylesheet" href="./styles.css?v=20">
   </head>
   <body>
     <!-- Aurora background -->
@@ -159,8 +159,14 @@
                   <option value="1800">30 min</option>
                   <option value="3600">1 hour</option>
                 </select>
-                <button id="wallpaperDownload" class="secondary" type="button">Download</button>
-                <button id="wallpaperShuffle" class="secondary" type="button">Reshuffle</button>
+                <button id="wallpaperDownload" class="secondary" type="button" title="Download wallpaper">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>Download</span>
+                </button>
+                <button id="wallpaperShuffle" class="secondary" type="button" title="Reshuffle wallpaper">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>Reshuffle</span>
+                </button>
               </div>
             </div>
             <div class="wallpaper-frame">
@@ -205,6 +211,9 @@
                 <select id="radioChannel" aria-label="Radio channel"></select>
                 <button id="radioPlay" type="button">Play</button>
                 <button id="radioPause" type="button" hidden>Pause</button>
+                <button id="radioReset" class="icon-button" type="button" title="Reset station" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
                 <button id="radioMute" class="icon-button" type="button" title="Mute">
                   <svg id="muteIcon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
                 </button>
@@ -231,6 +240,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0/dist/hls.min.js"></script>
-    <script src="./script.js?v=16"></script>
+    <script src="./script.js?v=21"></script>
   </body>
 </html>

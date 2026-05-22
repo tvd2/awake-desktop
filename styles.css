@@ -374,6 +374,31 @@ body {
 #wallpaper .wallpaper-frame { margin-top: 0; border-radius: 0; flex: 1; max-height: none; min-height: 100px; aspect-ratio: 16 / 9; }
 #wallpaper .wallpaper-frame.portrait { aspect-ratio: 9 / 16; flex: 0 0 auto; }
 #wallpaper .card-actions { gap: 6px; }
+#wallpaperDownload,
+#wallpaperShuffle {
+  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#wallpaperDownload svg,
+#wallpaperShuffle svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+#wallpaperDownload span,
+#wallpaperShuffle span {
+  display: none;
+}
 #wallpaperInterval {
   height: 32px;
   padding: 0 28px 0 10px;
@@ -953,12 +978,14 @@ select optgroup {
   flex-wrap: wrap;
 }
 
-#radioMute {
+#radioMute,
+#radioReset {
   background: transparent;
   border: 1px solid var(--border-strong);
   color: var(--accent);
 }
-#radioMute:hover {
+#radioMute:hover,
+#radioReset:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--accent);
   color: var(--accent-strong);
@@ -1210,6 +1237,11 @@ select optgroup {
 }
 
 @media (max-width: 640px) {
+  body {
+    overflow: visible;
+    overflow-x: hidden;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: stretch;
@@ -1223,27 +1255,109 @@ select optgroup {
     flex: 1;
     justify-content: center;
   }
+
   .bento {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto;
     grid-template-areas:
       "awake"
       "news"
       "right";
     gap: 12px;
     padding: 8px 16px 20px;
-    height: calc(100dvh - 140px);
-    overflow-y: auto;
+    height: auto;
+    min-height: calc(100dvh - 140px);
+    overflow: visible;
   }
-  .bento-card { min-height: auto; }
-  .card-inner { padding: 18px; overflow-y: visible; }
-  .weather-grid { grid-template-columns: repeat(2, 1fr); }
-  .mini-readout { grid-template-columns: repeat(2, 1fr); }
-  h2 { font-size: 1.3rem; }
-  #awake { max-height: none; }
-  #awake .card-inner { flex-direction: column; align-items: stretch; gap: 10px; }
-  #awake .cta-row { flex-direction: row; }
-  .right-stack { gap: 12px; }
+
+  .bento-card {
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .card-inner {
+    padding: 18px;
+    height: auto;
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  #news {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .news-list {
+    overflow-y: visible;
+    flex: none;
+  }
+
+  .right-stack {
+    overflow: visible;
+    min-height: auto;
+    gap: 12px;
+  }
+
+  #wallpaper {
+    flex: none;
+    min-height: auto;
+  }
+
+  #wallpaper .card-inner {
+    height: auto;
+  }
+
+  #wallpaper .wallpaper-frame {
+    flex: none;
+    width: 100%;
+  }
+
+  #wallpaper .wallpaper-frame.portrait {
+    max-height: 60vh;
+  }
+
+  #weather {
+    flex: none;
+  }
+
+  .weather-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mini-readout {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  h2 {
+    font-size: 1.3rem;
+  }
+
+  #awake {
+    max-height: none;
+  }
+
+  #awake .card-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #awake .cta-row {
+    flex-direction: row;
+  }
+
+  .bottom-row {
+    flex-direction: column;
+  }
+
+  .bottom-row > .bento-card {
+    flex: none;
+    width: 100%;
+  }
+
+  #limits .card-inner {
+    overflow-y: visible;
+  }
 }
 
 @media (max-width: 400px) {
