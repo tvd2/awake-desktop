@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=2">
+    <link rel="stylesheet" href="./styles.css?v=15">
   </head>
   <body>
     <!-- Aurora background -->
@@ -96,9 +96,18 @@
               <p class="eyebrow">No-Paywall Headlines</p>
               <h2>News scan</h2>
             </div>
-            <button id="newsButton" class="icon-button" type="button" title="Refresh news" aria-label="Refresh news">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-            </button>
+            <div class="card-actions">
+              <select id="newsInterval" aria-label="Auto refresh news">
+                <option value="0">No auto</option>
+                <option value="300">5 min</option>
+                <option value="900">15 min</option>
+                <option value="1800">30 min</option>
+                <option value="3600">1 hour</option>
+              </select>
+              <button id="newsButton" class="icon-button" type="button" title="Refresh news" aria-label="Refresh news">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              </button>
+            </div>
           </div>
 
           <div class="tabs-row">
@@ -112,13 +121,6 @@
               <button class="tab" type="button" data-category="entertainment">Fun</button>
               <button class="tab" type="button" data-category="local">Local</button>
             </div>
-            <select id="newsInterval" aria-label="Auto refresh news">
-              <option value="0">No auto</option>
-              <option value="300">5 min</option>
-              <option value="900">15 min</option>
-              <option value="1800">30 min</option>
-              <option value="3600">1 hour</option>
-            </select>
             <select id="languageSelect" aria-label="Language">
               <option value="en" selected>English</option>
               <option value="es">Spanish</option>
@@ -187,23 +189,48 @@
           </div>
         </article>
 
-        <!-- Limits — bottom of right stack -->
-        <article class="bento-card" id="limits" data-tilt>
-          <div class="card-inner">
-            <p class="eyebrow">Details</p>
-            <h2>Limits &amp; notes</h2>
-            <ul class="limit-list">
-              <li>Wake lock needs a secure context (HTTPS or localhost) and a Chromium browser.</li>
-              <li>OS policy, low battery, or admin controls can still override the browser.</li>
-              <li>Weather uses your browser geolocation and Open-Meteo.</li>
-              <li>News sources are public no-paywall outlets selected by language and location.</li>
-            </ul>
-          </div>
-        </article>
+        <div class="bottom-row">
+          <!-- Radio — bottom of right stack -->
+          <article class="bento-card" id="radio" data-tilt>
+            <div class="card-inner">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Stream</p>
+                  <h2>Radio</h2>
+                </div>
+              </div>
+              <p class="muted" id="radioStatus">Loading stations...</p>
+              <audio id="radioAudio" preload="none"></audio>
+              <div class="radio-controls">
+                <select id="radioChannel" aria-label="Radio channel"></select>
+                <button id="radioPlay" type="button">Play</button>
+                <button id="radioPause" type="button" hidden>Pause</button>
+                <button id="radioMute" class="icon-button" type="button" title="Mute">
+                  <svg id="muteIcon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Limits — bottom of right stack -->
+          <article class="bento-card" id="limits" data-tilt>
+            <div class="card-inner">
+              <p class="eyebrow">Details</p>
+              <h2>Limits &amp; notes</h2>
+              <ul class="limit-list">
+                <li>Wake lock needs a secure context (HTTPS or localhost) and a Chromium browser.</li>
+                <li>OS policy, low battery, or admin controls can still override the browser.</li>
+                <li>Weather uses your browser geolocation and Open-Meteo.</li>
+                <li>News sources are public no-paywall outlets selected by language and location.</li>
+              </ul>
+            </div>
+          </article>
+        </div>
       </aside>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
-    <script src="./script.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0/dist/hls.min.js"></script>
+    <script src="./script.js?v=16"></script>
   </body>
 </html>

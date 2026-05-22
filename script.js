@@ -25,6 +25,13 @@ const wallpaperDownload = document.querySelector("#wallpaperDownload");
 const awakeCard = document.querySelector("#awake");
 const tiltCards = document.querySelectorAll("[data-tilt]");
 const localTab = document.querySelector('.tab[data-category="local"]');
+const radioAudio = document.querySelector("#radioAudio");
+const radioPlay = document.querySelector("#radioPlay");
+const radioPause = document.querySelector("#radioPause");
+const radioMute = document.querySelector("#radioMute");
+const muteIcon = document.querySelector("#muteIcon");
+const radioGenre = document.querySelector("#radioChannel");
+const radioStatus = document.querySelector("#radioStatus");
 
 let wakeLock = null;
 let startedAt = null;
@@ -41,6 +48,8 @@ let newsTimer = null;
 let isLoadingNews = false;
 let isLoadingWeather = false;
 let shouldReloadNewsAfter = false;
+let radioChannels = [];
+let currentChannelIndex = 0;
 
 const supportedLocalCountries = ["AU", "US", "GB", "NZ", "CA"];
 
@@ -109,8 +118,17 @@ function formatElapsed(ms) {
 function updateWallpaper() {
   const wallpaper = wallpaperThemes[activeTheme] || wallpaperThemes.dark;
   const seed = wallpaper.seed + "-" + wallpaperShuffleCount;
-  const src = "https://picsum.photos/seed/" + encodeURIComponent(seed) + "/1600/700";
+  const src = "https://picsum.photos/seed/" + encodeURIComponent(seed) + "/2560/1440";
   wallpaperImage.src = src;
+  wallpaperImage.onload = () => {
+    const frame = document.querySelector(".wallpaper-frame");
+    if (!frame) return;
+    if (wallpaperImage.naturalHeight > wallpaperImage.naturalWidth) {
+      frame.classList.add("portrait");
+    } else {
+      frame.classList.remove("portrait");
+    }
+  };
 }
 
 function downloadWallpaper() {
@@ -262,7 +280,7 @@ function placeLabel(data) {
   return [city, region, data.countryName].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
 }
 
-function skeletonWeatherCards(count = 3) {
+function skeletonWeatherCards(count = 5) {
   weatherGrid.innerHTML = "";
   for (let i = 0; i < count; i++) {
     const card = document.createElement("div");
@@ -275,7 +293,7 @@ function skeletonWeatherCards(count = 3) {
 
 function renderForecast(days) {
   weatherGrid.innerHTML = "";
-  days.slice(0, 3).forEach((day) => {
+  days.forEach((day) => {
     const date = new Date(day.date + "T12:00:00");
     const icon = weatherIcons[day.code] || weatherIcons[0];
     const card = document.createElement("article");
@@ -284,19 +302,56 @@ function renderForecast(days) {
       '<h3>' + date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) + '</h3>' +
       '<div class="weather-icon" aria-hidden="true">' + icon + '</div>' +
       '<p class="temp">' + (Number.isFinite(day.max) ? Math.round(day.max) : "--") + "°</p>" +
-      '<p class="muted" style="font-size:0.7rem">' + (weatherCodes[day.code] || "Forecast") + "</p>";
+      '<p class="muted" style="font-size:0.7rem">' + (weatherCodes[day.code] || "Forecast") + "</p>" +
+      '<p class="wind">' + (Number.isFinite(day.wind) ? Math.round(day.wind) : "--") + " km/h</p>";
     weatherGrid.append(card);
   });
 }
 
+const suffixToCountry = {
+  nsw: "Australia", vic: "Australia", qld: "Australia", tas: "Australia",
+  sa: "Australia", wa: "Australia", act: "Australia", nt: "Australia",
+  australia: "Australia", usa: "United States", "united states": "United States",
+  uk: "United Kingdom", "united kingdom": "United Kingdom",
+  canada: "Canada", "new zealand": "New Zealand"
+};
+
+function inferCountryFromSuffix(name) {
+  const m = name.match(/[,\s]+(NSW|VIC|QLD|TAS|SA|WA|ACT|NT|Australia|USA?|United States|UK|United Kingdom|Canada|New Zealand)$/i);
+  if (!m) return null;
+  const key = m[1].toLowerCase();
+  return suffixToCountry[key] || null;
+}
+
+function stripLocationSuffixes(name) {
+  return name
+    .replace(/,\s*(NSW|VIC|QLD|TAS|SA|WA|ACT|NT|Australia|USA?|United States|UK|United Kingdom|Canada|New Zealand)$/i, "")
+    .replace(/\s+(NSW|VIC|QLD|TAS|SA|WA|ACT|NT|Australia|USA?|United States|UK|United Kingdom|Canada|New Zealand)$/i, "")
+    .trim();
+}
+
 async function geocodeCity(city, country) {
-  const url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=5";
-  const response = await fetch(url);
+  let url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=20";
+  let response = await fetch(url);
   if (!response.ok) throw new Error("Geocoding failed.");
-  const data = await response.json();
+  let data = await response.json();
   let results = data.results || [];
-  if (country) {
-    const c = country.toLowerCase();
+  let inferredCountry = country;
+
+  if (!results.length) {
+    const stripped = stripLocationSuffixes(city);
+    inferredCountry = country || inferCountryFromSuffix(city);
+    if (stripped !== city) {
+      url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(stripped) + "&count=20";
+      response = await fetch(url);
+      if (!response.ok) throw new Error("Geocoding failed.");
+      data = await response.json();
+      results = data.results || [];
+    }
+  }
+
+  if (inferredCountry) {
+    const c = inferredCountry.toLowerCase();
     results = results.filter((r) =>
       (r.country || "").toLowerCase() === c ||
       (r.country_code || "").toLowerCase() === c
@@ -332,7 +387,8 @@ async function loadWeatherManual(event) {
       date, code: data.daily.weather_code[i],
       max: data.daily.temperature_2m_max[i],
       min: data.daily.temperature_2m_min[i],
-      rain: data.daily.precipitation_probability_max[i] || 0
+      rain: data.daily.precipitation_probability_max[i] || 0,
+      wind: data.daily.wind_speed_10m_max[i]
     }));
     renderForecast(days);
     weatherStatus.textContent = "Forecast for " + place.label + ".";
@@ -376,7 +432,8 @@ async function loadWeather() {
       date, code: data.daily.weather_code[i],
       max: data.daily.temperature_2m_max[i],
       min: data.daily.temperature_2m_min[i],
-      rain: data.daily.precipitation_probability_max[i] || 0
+      rain: data.daily.precipitation_probability_max[i] || 0,
+      wind: data.daily.wind_speed_10m_max[i]
     }));
     renderForecast(days);
     weatherStatus.textContent = "Forecast for " + (place.label || "your location") + ".";
@@ -479,6 +536,130 @@ async function loadNews() {
   }
 }
 
+/* ─── Radio ─── */
+async function loadRadioChannels() {
+  if (!radioGenre) return;
+  radioStatus.textContent = "Loading stations...";
+  try {
+    const response = await fetch("/api/radio");
+    if (!response.ok) throw new Error("Radio failed.");
+    const channels = await response.json();
+    radioChannels = channels;
+    radioGenre.innerHTML = "";
+    if (channels.length) {
+      channels.forEach((ch, i) => {
+        const option = document.createElement("option");
+        option.value = String(i);
+        option.textContent = ch.title;
+        radioGenre.appendChild(option);
+      });
+      radioStatus.textContent = channels.length + " stations ready.";
+      currentChannelIndex = 0;
+    } else {
+      radioStatus.textContent = "No radio channels available.";
+    }
+  } catch (error) {
+    radioStatus.textContent = "Could not load radio.";
+    radioChannels = [];
+  }
+}
+
+let hls = null;
+
+function destroyHls() {
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+}
+
+function resolveStreamUrl(url) {
+  if (url.startsWith("http://")) {
+    return "/api/radio-proxy?url=" + encodeURIComponent(url);
+  }
+  return url;
+}
+
+function playRadio() {
+  if (!radioChannels.length || !radioAudio) return;
+  const channel = radioChannels[currentChannelIndex];
+  if (!channel.playlists || !channel.playlists.length) {
+    radioStatus.textContent = "No stream available.";
+    return;
+  }
+  destroyHls();
+  radioAudio.src = "";
+  radioStatus.textContent = "Connecting...";
+  radioPlay.hidden = true;
+  if (radioPause) radioPause.hidden = true;
+
+  const playlist = channel.playlists[0];
+  const isHLS = playlist.format === "hls" || playlist.url.endsWith(".m3u8");
+
+  if (isHLS && typeof Hls !== "undefined" && Hls.isSupported()) {
+    hls = new Hls();
+    hls.attachMedia(radioAudio);
+    hls.loadSource(playlist.url);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      radioAudio.play().then(() => {
+        if (radioPause) radioPause.hidden = false;
+        radioStatus.textContent = "playing " + channel.title;
+      }).catch(() => {
+        radioStatus.textContent = "Playback blocked.";
+        radioPlay.hidden = false;
+        if (radioPause) radioPause.hidden = true;
+      });
+    });
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      if (data.fatal) {
+        radioStatus.textContent = "Stream unavailable.";
+        radioPlay.hidden = false;
+        if (radioPause) radioPause.hidden = true;
+        destroyHls();
+      }
+    });
+  } else {
+    radioAudio.src = resolveStreamUrl(playlist.url);
+    radioAudio.play().then(() => {
+      if (radioPause) radioPause.hidden = false;
+      radioStatus.textContent = "playing " + channel.title;
+    }).catch(() => {
+      radioStatus.textContent = "Playback blocked.";
+      radioPlay.hidden = false;
+      if (radioPause) radioPause.hidden = true;
+    });
+  }
+}
+
+function stopRadio() {
+  if (!radioAudio) return;
+  destroyHls();
+  radioAudio.pause();
+  radioAudio.src = "";
+  radioPlay.hidden = false;
+  if (radioPause) radioPause.hidden = true;
+  radioStatus.textContent = "Stopped";
+}
+
+function pauseRadio() {
+  if (!radioAudio) return;
+  radioAudio.pause();
+  radioPlay.hidden = false;
+  if (radioPause) radioPause.hidden = true;
+  radioStatus.textContent = "Paused";
+}
+
+const muteOnSvg = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+const muteOffSvg = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+
+function toggleMute() {
+  if (!radioAudio) return;
+  radioAudio.muted = !radioAudio.muted;
+  if (muteIcon) muteIcon.innerHTML = radioAudio.muted ? muteOffSvg : muteOnSvg;
+  radioMute.setAttribute("title", radioAudio.muted ? "Unmute" : "Mute");
+  radioMute.setAttribute("aria-label", radioAudio.muted ? "Unmute" : "Mute");
+}
+
 /* ─── 3D Tilt effect ─── */
 function initTilt() {
   tiltCards.forEach((card) => {
@@ -522,6 +703,17 @@ themeButtons.forEach((button) =>
 );
 colorPicker.addEventListener("change", () => setAccent(colorPicker.value));
 
+radioPlay.addEventListener("click", playRadio);
+radioPause.addEventListener("click", pauseRadio);
+radioMute.addEventListener("click", toggleMute);
+radioGenre.addEventListener("change", () => {
+  currentChannelIndex = Number(radioGenre.value);
+  const channel = radioChannels[currentChannelIndex];
+  if (channel) {
+    radioStatus.textContent = "Selected: " + channel.title;
+  }
+});
+
 function onCategoryClick(button) {
   activeCategory = button.dataset.category;
   categoryButtons.forEach((item) => item.classList.toggle("active", item === button));
@@ -556,4 +748,5 @@ const savedNewsInterval = localStorage.getItem("awake-news-interval") || "0";
 newsIntervalSelect.value = savedNewsInterval;
 setNewsInterval(savedNewsInterval);
 loadNews();
+loadRadioChannels();
 initTilt();

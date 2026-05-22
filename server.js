@@ -1,4 +1,5 @@
 const http = require("node:http");
+const https = require("node:https");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 
@@ -71,17 +72,17 @@ const noPaywallLocalSources = {
   default: ["bbc.com/news", "apnews.com", "reuters.com"]
 };
 const languageProfiles = {
-  en: { hl: "en", domains: ["bbc.com/news", "apnews.com", "theguardian.com", "npr.org", "pbs.org/newshour"], defaultCountry: "US" },
-  es: { hl: "es", domains: ["rtve.es/noticias", "elpais.com", "bbc.com/mundo", "dw.com/es"], defaultCountry: "ES" },
-  fr: { hl: "fr", domains: ["france24.com/fr", "lemonde.fr", "rfi.fr", "francetvinfo.fr"], defaultCountry: "FR" },
-  de: { hl: "de", domains: ["tagesschau.de", "dw.com/de", "zdf.de/nachrichten"], defaultCountry: "DE" },
-  zh: { hl: "zh", domains: ["bbc.com/zhongwen", "rfi.fr/cn", "dw.com/zh"], defaultCountry: "CN" },
-  ar: { hl: "ar", domains: ["bbc.com/arabic", "france24.com/ar", "dw.com/ar"], defaultCountry: "SA" },
-  hi: { hl: "hi", domains: ["bbc.com/hindi", "dw.com/hi", "aajtak.in"], defaultCountry: "IN" },
-  id: { hl: "id", domains: ["bbc.com/indonesia", "kompas.com", "tempo.co"], defaultCountry: "ID" },
-  ja: { hl: "ja", domains: ["www3.nhk.or.jp/news", "bbc.com/japanese"], defaultCountry: "JP" },
-  ko: { hl: "ko", domains: ["yna.co.kr", "bbc.com/korean"], defaultCountry: "KR" },
-  vi: { hl: "vi", domains: ["vnexpress.net", "tuoitre.vn", "thanhnien.vn", "vietnamnet.vn", "vov.vn"], defaultCountry: "VN" }
+  en: { hl: "en", domains: ["bbc.com/news", "apnews.com", "reuters.com", "theguardian.com", "aljazeera.com", "npr.org", "pbs.org/newshour", "france24.com/en", "rfi.fr/en", "dw.com/en"], defaultCountry: "US" },
+  es: { hl: "es", domains: ["bbc.com/mundo", "elpais.com", "rtve.es/noticias", "france24.com/es", "rfi.fr/es", "dw.com/es", "cnn.com/espanol", "20minutos.es"], defaultCountry: "ES" },
+  fr: { hl: "fr", domains: ["france24.com/fr", "lemonde.fr", "rfi.fr", "francetvinfo.fr", "bbc.com/afrique", "dw.com/fr", "lepoint.fr", "20minutes.fr"], defaultCountry: "FR" },
+  de: { hl: "de", domains: ["tagesschau.de", "dw.com/de", "zdf.de/nachrichten", "spiegel.de", "sueddeutsche.de", "france24.com/de", "rfi.fr/de"], defaultCountry: "DE" },
+  zh: { hl: "zh", domains: ["bbc.com/zhongwen", "rfi.fr/cn", "dw.com/zh", "voachinese.com", "rfa.org/mandarin"], defaultCountry: "CN" },
+  ar: { hl: "ar", domains: ["bbc.com/arabic", "france24.com/ar", "dw.com/ar", "aljazeera.net", "alarabiya.net", "rfi.fr/ar", "skynewsarabia.com"], defaultCountry: "SA" },
+  hi: { hl: "hi", domains: ["bbc.com/hindi", "dw.com/hi", "aajtak.in", "ndtv.com", "abplive.com"], defaultCountry: "IN" },
+  id: { hl: "id", domains: ["bbc.com/indonesia", "kompas.com", "tempo.co", "detik.com", "cnnindonesia.com", "liputan6.com"], defaultCountry: "ID" },
+  ja: { hl: "ja", domains: ["www3.nhk.or.jp/news", "bbc.com/japanese", "asahi.com", "mainichi.jp", "yomiuri.co.jp"], defaultCountry: "JP" },
+  ko: { hl: "ko", domains: ["yna.co.kr", "bbc.com/korean", "khan.co.kr", "chosun.com", "joongang.co.kr"], defaultCountry: "KR" },
+  vi: { hl: "vi", domains: ["vnexpress.net", "tuoitre.vn", "thanhnien.vn", "vietnamnet.vn", "vov.vn", "dantri.com.vn", "tienphong.vn"], defaultCountry: "VN" }
 };
 const categoryQueries = {
   technology: "technology OR artificial intelligence OR software",
@@ -246,7 +247,7 @@ async function handleApi(req, res, url) {
       sendJson(res, 400, { error: "Invalid coordinates" });
       return;
     }
-    const params = new URLSearchParams({ latitude: String(lat), longitude: String(lon), daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max", timezone: "auto", forecast_days: "5" });
+    const params = new URLSearchParams({ latitude: String(lat), longitude: String(lon), daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max", timezone: "auto", forecast_days: "5" });
     sendJson(res, 200, await fetchJson("https://api.open-meteo.com/v1/forecast?" + params));
     return;
   }
@@ -273,6 +274,44 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, parseRss(await fetchText(rssUrl), category === "local" ? (city || country || "Local news") : category));
     return;
   }
+  if (url.pathname === "/api/radio") {
+    sendJson(res, 200, [
+      { id: "rp-main", title: "Radio Paradise — Main Mix", description: "Eclectic rock and world mix", playlists: [{ url: "https://stream.radioparadise.com/mp3-192", format: "mp3" }] },
+      { id: "rp-rock", title: "Radio Paradise — Rock", description: "Rock mix", playlists: [{ url: "https://stream.radioparadise.com/rock-192", format: "mp3" }] },
+      { id: "rp-mellow", title: "Radio Paradise — Mellow", description: "Mellow mix", playlists: [{ url: "https://stream.radioparadise.com/mellow-192", format: "mp3" }] },
+      { id: "rp-global", title: "Radio Paradise — Global", description: "Global mix", playlists: [{ url: "https://stream.radioparadise.com/global-192", format: "mp3" }] },
+      { id: "sf-groovesalad", title: "SomaFM — Groove Salad", description: "Chillout and lofi beats", playlists: [{ url: "http://ice1.somafm.com/groovesalad-128-mp3", format: "mp3" }] },
+      { id: "sf-dronezone", title: "SomaFM — Drone Zone", description: "Ambient and atmospheric", playlists: [{ url: "http://ice1.somafm.com/dronezone-128-mp3", format: "mp3" }] },
+      { id: "sf-secretagent", title: "SomaFM — Secret Agent", description: "Downtempo spy music", playlists: [{ url: "http://ice1.somafm.com/secretagent-128-mp3", format: "mp3" }] },
+      { id: "sf-bootliquor", title: "SomaFM — Boot Liquor", description: "Americana and alt-country", playlists: [{ url: "http://ice1.somafm.com/bootliquor-128-mp3", format: "mp3" }] },
+      { id: "sf-poptron", title: "SomaFM — PopTron", description: "Indie pop and electro", playlists: [{ url: "http://ice1.somafm.com/poptron-128-mp3", format: "mp3" }] }
+    ]);
+    return;
+  }
+  if (url.pathname === "/api/radio-proxy") {
+    const target = url.searchParams.get("url") || "";
+    if (!target || !(target.startsWith("http://") || target.startsWith("https://"))) {
+      res.writeHead(400); res.end("Bad URL"); return;
+    }
+    const allowedHosts = ["ice1.somafm.com", "ice2.somafm.com", "ice4.somafm.com", "ice6.somafm.com", "somafm.com", "stream.radioparadise.com"];
+    const targetUrl = new URL(target);
+    if (!allowedHosts.includes(targetUrl.hostname)) {
+      res.writeHead(403); res.end("Forbidden host"); return;
+    }
+    const isHttps = target.startsWith("https://");
+    const client = isHttps ? https : http;
+    const proxyReq = client.request(target, { method: "GET", headers: { "user-agent": "AwakeDesk/1.0" } }, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, {
+        "content-type": proxyRes.headers["content-type"] || "audio/mpeg",
+        "transfer-encoding": proxyRes.headers["transfer-encoding"] || "chunked",
+        "accept-ranges": "none"
+      });
+      proxyRes.pipe(res);
+    });
+    proxyReq.on("error", (err) => { res.writeHead(502); res.end("Proxy error: " + (err?.message || "unknown")); });
+    proxyReq.end();
+    return;
+  }
   sendJson(res, 404, { error: "Not found" });
 }
 async function serveStatic(res, pathname) {
@@ -280,7 +319,7 @@ async function serveStatic(res, pathname) {
   const resolved = path.resolve(root, path.join(".", path.normalize(requested)));
   if (!resolved.startsWith(root + path.sep) && resolved !== root) { res.writeHead(403); res.end("Forbidden"); return; }
   const content = await readFile(resolved);
-  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self'; connect-src 'self' https://*.open-meteo.com; img-src 'self' https://picsum.photos https://*.picsum.photos; font-src https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com" });
+  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
   res.end(content);
 }
 http.createServer(async (req, res) => {
