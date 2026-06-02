@@ -49,6 +49,11 @@ let newsTimer = null;
 let isLoadingNews = false;
 let isLoadingWeather = false;
 let shouldReloadNewsAfter = false;
+let newsPool = [];
+const MAX_DISPLAYED_NEWS = 10;
+let displayedNews = [];
+let readArticleUrls = new Set();
+let pendingReplacements = [];
 let radioChannels = [];
 let currentChannelIndex = 0;
 let playingChannelIndex = -1;
@@ -118,6 +123,14 @@ function formatElapsed(ms) {
   const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
   const seconds = String(totalSeconds % 60).padStart(2, "0");
   return hours + ":" + minutes + ":" + seconds;
+}
+
+function isToday(publishedAt) {
+  if (!publishedAt) return false;
+  const d = new Date(publishedAt);
+  if (Number.isNaN(d.valueOf())) return false;
+  const now = new Date();
+  return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
 
 function updateWallpaper() {
@@ -466,33 +479,103 @@ function skeletonNewsItems(count = 6) {
   }
 }
 
-function renderNews(items) {
-  newsList.innerHTML = "";
-  items.slice(0, 10).forEach((item) => {
-    const published = item.publishedAt ? new Date(item.publishedAt) : null;
-    const time = published && !Number.isNaN(published.valueOf())
-      ? published.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-      : item.source;
-    const article = document.createElement("article");
-    article.className = "news-item";
-    const sourceP = document.createElement("p");
-    sourceP.className = "source";
-    sourceP.textContent = item.source;
-    const titleH3 = document.createElement("h3");
-    const link = document.createElement("a");
-    link.href = item.url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = item.title;
-    titleH3.appendChild(link);
-    const timeP = document.createElement("p");
-    timeP.className = "muted";
-    timeP.textContent = time;
-    article.appendChild(sourceP);
-    article.appendChild(titleH3);
-    article.appendChild(timeP);
-    newsList.append(article);
+function createNewsArticle(item) {
+  const published = item.publishedAt ? new Date(item.publishedAt) : null;
+  const time = published && !Number.isNaN(published.valueOf())
+    ? published.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    : item.source;
+  const article = document.createElement("article");
+  article.className = "news-item";
+  article.dataset.url = item.url;
+
+  const sourceP = document.createElement("p");
+  sourceP.className = "source";
+  sourceP.textContent = item.source;
+  const titleH3 = document.createElement("h3");
+  const link = document.createElement("a");
+  link.href = item.url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = item.title;
+  titleH3.appendChild(link);
+  const timeP = document.createElement("p");
+  timeP.className = "muted";
+  timeP.textContent = time;
+  article.appendChild(sourceP);
+  article.appendChild(titleH3);
+  article.appendChild(timeP);
+
+  // Click dismisses the article and replaces it with the next from pool
+  article.addEventListener("click", (e) => {
+    // Don't trigger if user is selecting text or if already dismissing
+    if (window.getSelection().toString().length > 0 || article.classList.contains("dismissing")) return;
+    const isLinkClick = e.target.closest("a");
+    if (!isLinkClick) {
+      window.open(item.url, "_blank", "noopener,noreferrer");
+    }
+    readArticleUrls.add(item.url);
+    const idx = displayedNews.findIndex((d) => d.url === item.url);
+    if (idx > -1) displayedNews.splice(idx, 1);
+    const nextSibling = article.nextSibling;
+    article.classList.add("dismissing");
+    setTimeout(() => {
+      article.remove();
+      replaceNewsItem(nextSibling);
+    }, 300);
   });
+
+  return article;
+}
+
+function renderNews(items, append = false) {
+  if (!append) {
+    pendingReplacements = [];
+    newsList.innerHTML = "";
+    displayedNews = [];
+  }
+  items.forEach((item) => {
+    const article = createNewsArticle(item);
+    if (append) article.classList.add("entering");
+    newsList.append(article);
+    displayedNews.push(item);
+  });
+}
+
+function replaceNewsItem(insertBeforeElement) {
+  if (newsPool.length === 0) {
+    pendingReplacements.push(insertBeforeElement);
+    if (!isLoadingNews) {
+      loadNews();
+    }
+    return;
+  }
+  const nextItem = newsPool.shift();
+  // Skip if this item is already on screen (race-condition guard)
+  const alreadyOnScreen = displayedNews.some((d) => d.url === nextItem.url);
+  if (alreadyOnScreen) {
+    replaceNewsItem(insertBeforeElement);
+    return;
+  }
+  const article = createNewsArticle(nextItem);
+  article.classList.add("entering");
+  if (insertBeforeElement && insertBeforeElement.parentNode === newsList) {
+    newsList.insertBefore(article, insertBeforeElement);
+  } else {
+    newsList.append(article);
+  }
+  displayedNews.push(nextItem);
+  setTimeout(() => article.classList.remove("entering"), 50);
+  updateNewsStatus();
+}
+
+function updateNewsStatus() {
+  const where = activeCategory === "local" && place.label ? " for " + place.label : "";
+  const count = displayedNews.length;
+  if (count === 0 && newsPool.length === 0) {
+    newsStatus.textContent = "No new " + activeCategory + " stories" + where + " in " + (languageSelect.selectedOptions[0]?.text || activeLanguage) + ".";
+  } else {
+    newsStatus.textContent = newsPool.length + " more in queue | " + count + " " + activeCategory + " stories" + where + " in " + (languageSelect.selectedOptions[0]?.text || activeLanguage) + ".";
+  }
 }
 
 async function loadNews() {
@@ -503,7 +586,7 @@ async function loadNews() {
   isLoadingNews = true;
   newsButton.disabled = true;
   newsStatus.textContent = "Loading " + activeCategory + " news.";
-  skeletonNewsItems();
+  if (!newsList.children.length) skeletonNewsItems();
   try {
     const params = new URLSearchParams({
       category: activeCategory, language: activeLanguage,
@@ -512,31 +595,48 @@ async function loadNews() {
     const response = await fetch("/api/news?" + params);
     if (!response.ok) throw new Error("News source failed.");
     const items = await response.json();
-    const isSame = lastNewsItems.length && items.length &&
-      lastNewsItems.slice(0, 5).every((it, i) => items[i] && it.url === items[i].url);
-    renderNews(items);
-    lastNewsItems = items;
-    const where = activeCategory === "local" && place.label ? " for " + place.label : "";
-    if (isSame) {
-      const upToDate = "All news up-to-date.";
-      newsStatus.textContent = upToDate;
-      setTimeout(() => {
-        if (newsStatus.textContent === upToDate) {
-          newsStatus.textContent = items.length + " " + activeCategory + " stories" + where + " in " + languageSelect.selectedOptions[0].text + ".";
-        }
-      }, 3000);
-    } else {
-      newsStatus.textContent = items.length + " " + activeCategory + " stories" + where + " in " + languageSelect.selectedOptions[0].text + ".";
+    // Filter out duplicates we've already seen or are currently on screen
+    const seenInBatch = new Set();
+    const newItems = items.filter((item) => {
+      const inDisplayed = displayedNews.some((d) => d.url === item.url);
+      const inPool = newsPool.some((p) => p.url === item.url);
+      const inBatch = seenInBatch.has(item.url);
+      const alreadyRead = readArticleUrls.has(item.url);
+      if (!inDisplayed && !inPool && !inBatch && !alreadyRead && isToday(item.publishedAt)) {
+        seenInBatch.add(item.url);
+        return true;
+      }
+      return false;
+    });
+    newsPool.push(...newItems);
+    // If no new items arrived, clear pending replacements (nothing to replace with)
+    if (newItems.length === 0) {
+      pendingReplacements = [];
     }
+    // If nothing displayed yet, render the first batch
+    const hasRealItems = Array.from(newsList.children).some((el) => !el.classList.contains("skeleton"));
+    if (!hasRealItems) {
+      pendingReplacements = [];
+      newsList.innerHTML = "";
+      const initialItems = newsPool.splice(0, MAX_DISPLAYED_NEWS);
+      renderNews(initialItems);
+    }
+    lastNewsItems = items;
+    updateNewsStatus();
   } catch (error) {
     newsStatus.textContent = error?.message || "Could not load news.";
-    newsList.innerHTML = "";
+    if (!newsList.children.length) newsList.innerHTML = "";
   } finally {
     isLoadingNews = false;
     newsButton.disabled = false;
     if (shouldReloadNewsAfter) {
       shouldReloadNewsAfter = false;
       loadNews();
+    }
+    // Process pending replacements now that the pool is replenished
+    while (pendingReplacements.length > 0 && newsPool.length > 0) {
+      const insertBefore = pendingReplacements.shift();
+      replaceNewsItem(insertBefore);
     }
   }
 }
@@ -742,7 +842,14 @@ testButton.addEventListener("click", () => {
 });
 weatherButton.addEventListener("click", loadWeather);
 locationForm.addEventListener("submit", loadWeatherManual);
-newsButton.addEventListener("click", loadNews);
+newsButton.addEventListener("click", () => {
+  newsPool = [];
+  pendingReplacements = [];
+  readArticleUrls.clear();
+  newsList.innerHTML = "";
+  displayedNews = [];
+  loadNews();
+});
 wallpaperShuffle.addEventListener("click", () => {
   wallpaperShuffleCount += 1;
   localStorage.setItem("awake-wallpaper-shuffle", String(wallpaperShuffleCount));
@@ -790,6 +897,11 @@ if (radioAudio) {
 function onCategoryClick(button) {
   activeCategory = button.dataset.category;
   categoryButtons.forEach((item) => item.classList.toggle("active", item === button));
+  newsPool = [];
+  pendingReplacements = [];
+  readArticleUrls.clear();
+  newsList.innerHTML = "";
+  displayedNews = [];
   loadNews();
 }
 
@@ -801,6 +913,11 @@ languageSelect.value = activeLanguage;
 languageSelect.addEventListener("change", () => {
   activeLanguage = languageSelect.value;
   localStorage.setItem("awake-news-language", activeLanguage);
+  newsPool = [];
+  pendingReplacements = [];
+  readArticleUrls.clear();
+  newsList.innerHTML = "";
+  displayedNews = [];
   loadNews();
 });
 

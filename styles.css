@@ -509,6 +509,37 @@ body {
   border-radius: 3px;
 }
 
+/* ─── News scrollbar: hidden by default, show on hover ─── */
+#newsList {
+  scrollbar-width: none;
+}
+
+#newsList:hover {
+  scrollbar-width: thin;
+}
+
+#newsList::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+#newsList:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+#newsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#newsList::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+#newsList:hover::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
 /* ─── Wake lock compact mode ─── */
 #awake.compact .cta-row {
   display: none;
@@ -886,8 +917,8 @@ select optgroup {
 .news-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
@@ -900,11 +931,54 @@ select optgroup {
 }
 
 .news-item {
-  padding: 12px;
-  border-radius: 12px;
+  padding: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
   transition: all var(--duration-fast) var(--ease-out);
+  position: relative;
+  cursor: pointer;
+}
+
+.news-item.dismissing {
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: all 0.3s var(--ease-out);
+  pointer-events: none;
+  max-height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  border: none;
+}
+
+.news-item.entering {
+  opacity: 0;
+  transform: translateX(20px);
+  animation: newsEnter 0.3s var(--ease-out) forwards;
+}
+
+@keyframes newsEnter {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.news-item::after {
+  content: "×";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: var(--muted);
+  font-size: 1.1rem;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+  pointer-events: none;
+}
+
+.news-item:hover::after {
+  opacity: 0.5;
 }
 
 .news-item:hover {
@@ -914,19 +988,24 @@ select optgroup {
 }
 
 .source {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--accent);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .news-item h3 {
-  margin: 0 0 4px;
-  font-size: 0.9rem;
+  margin: 0 0 2px;
+  font-size: 0.85rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.2;
+}
+
+.news-item .muted {
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
 .news-item a {

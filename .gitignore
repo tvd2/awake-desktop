@@ -2,8 +2,12 @@
 .playwright-mcp/
 .DS_Store
 .env
+.env.bak
 node_modules/
 npm-debug.log*
 docs/
 scripts/
 docker-compose.override.yml
+*.log
+screenshot*.png
+playwright-snapshot.md

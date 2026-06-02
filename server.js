@@ -210,7 +210,7 @@ function tag(block, name) {
   return textFromXml(match?.[1]);
 }
 function parseRss(xml, sourceFallback) {
-  return [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0, 12).map(([block]) => ({
+  return [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0, 50).map(([block]) => ({
     source: tag(block, "source") || sourceFallback,
     title: tag(block, "title"),
     url: tag(block, "link"),
@@ -265,7 +265,7 @@ async function handleApi(req, res, url) {
     const sourceQuery = sourceDomains.map((source) => "site:" + source).join(" OR ");
     const langQueries = categoryQueriesByLanguage[language] || categoryQueries;
     const baseQuery = category === "local" ? ((city || country || "local") + " " + country) : (langQueries[category] || categoryQueries[category] || categoryQueries.technology);
-    const query = baseQuery + " (" + sourceQuery + ") when:7d";
+    const query = baseQuery + " (" + sourceQuery + ") when:24h";
     const rssUrl = new URL("https://news.google.com/rss/search");
     rssUrl.searchParams.set("q", query);
     rssUrl.searchParams.set("hl", profile.hl + "-" + code);
