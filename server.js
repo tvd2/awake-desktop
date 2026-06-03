@@ -288,7 +288,17 @@ async function handleApi(req, res, url) {
       { id: "fip", title: "FIP Radio", description: "Eclectic mix from France (no ads)", playlists: [{ url: "https://icecast.radiofrance.fr/fip-midfi.mp3", format: "mp3" }] },
       { id: "kexp", title: "KEXP Seattle", description: "Indie and alternative", playlists: [{ url: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", format: "mp3" }] },
       { id: "mpr-peaceful", title: "MPR — Peaceful Piano", description: "Ambient solo piano", playlists: [{ url: "https://peacefulpiano.stream.publicradio.org/peacefulpiano.aac", format: "aac" }] },
-      { id: "mpr-relax", title: "MPR — Relax", description: "Ambient and atmospheric", playlists: [{ url: "https://relax.stream.publicradio.org/relax.mp3", format: "mp3" }] }
+      { id: "mpr-relax", title: "MPR — Relax", description: "Ambient and atmospheric", playlists: [{ url: "https://relax.stream.publicradio.org/relax.mp3", format: "mp3" }] },
+      { id: "au-triplej", title: "Triple J", description: "Australian alternative and new music", playlists: [{ url: "https://abc.streamguys1.com/live/triplejnsw/icecast.audio", format: "aac" }] },
+      { id: "au-rn", title: "ABC Radio National", description: "Australian news, culture, and ideas", playlists: [{ url: "https://abc.streamguys1.com/live/rnnsw/icecast.audio", format: "aac" }] },
+      { id: "au-2gb", title: "2GB Sydney", description: "Talk and news radio", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/2GB.mp3", format: "mp3" }] },
+      { id: "au-3aw", title: "3AW Melbourne", description: "Talk and news radio", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/3AW.mp3", format: "mp3" }] },
+      { id: "au-nova", title: "Nova 969 Sydney", description: "Hit music", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/NOVA_969.mp3", format: "mp3" }] },
+      { id: "au-smooth", title: "Smooth 953 Sydney", description: "Easy listening", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/SMOOTH953.mp3", format: "mp3" }] },
+      { id: "au-4bc", title: "4BC Brisbane", description: "Talk and news radio", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/4BC.mp3", format: "mp3" }] },
+      { id: "au-6pr", title: "6PR Perth", description: "Talk and news radio", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/6PR.mp3", format: "mp3" }] },
+      { id: "au-2ca", title: "2CA Canberra", description: "Classic hits", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/2CA.mp3", format: "mp3" }] },
+      { id: "au-safm", title: "SAFM Adelaide", description: "Hit music", playlists: [{ url: "https://playerservices.streamtheworld.com/api/livestream-redirect/SAFM.mp3", format: "mp3" }] }
     ]);
     return;
   }
@@ -297,23 +307,37 @@ async function handleApi(req, res, url) {
     if (!target || !(target.startsWith("http://") || target.startsWith("https://"))) {
       res.writeHead(400); res.end("Bad URL"); return;
     }
-    const allowedHosts = ["ice1.somafm.com", "ice2.somafm.com", "ice4.somafm.com", "ice6.somafm.com", "somafm.com", "stream.radioparadise.com"];
+    const allowedHosts = ["ice1.somafm.com", "ice2.somafm.com", "ice4.somafm.com", "ice6.somafm.com", "somafm.com", "stream.radioparadise.com", "abc.streamguys1.com", "playerservices.streamtheworld.com", "*.streamtheworld.com"];
+    function isAllowedHost(hostname) {
+      return allowedHosts.some((h) => h === hostname || (h.startsWith("*.") && hostname.endsWith(h.slice(1))));
+    }
     const targetUrl = new URL(target);
-    if (!allowedHosts.includes(targetUrl.hostname)) {
+    if (!isAllowedHost(targetUrl.hostname)) {
       res.writeHead(403); res.end("Forbidden host"); return;
     }
-    const isHttps = target.startsWith("https://");
-    const client = isHttps ? https : http;
-    const proxyReq = client.request(target, { method: "GET", headers: { "user-agent": "AwakeDesk/1.0" } }, (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 200, {
-        "content-type": proxyRes.headers["content-type"] || "audio/mpeg",
-        "transfer-encoding": proxyRes.headers["transfer-encoding"] || "chunked",
-        "accept-ranges": "none"
+    function proxyTo(finalTarget, redirectCount) {
+      if (redirectCount > 3) { res.writeHead(502); res.end("Too many redirects"); return; }
+      const finalIsHttps = finalTarget.startsWith("https://");
+      const finalClient = finalIsHttps ? https : http;
+      const finalReq = finalClient.request(finalTarget, { method: "GET", headers: { "user-agent": "AwakeDesk/1.0" } }, (finalRes) => {
+        if (finalRes.statusCode >= 301 && finalRes.statusCode <= 308 && finalRes.headers.location) {
+          const redirectUrl = new URL(finalRes.headers.location, finalTarget).toString();
+          const redirectHost = new URL(redirectUrl).hostname;
+          if (!isAllowedHost(redirectHost)) { res.writeHead(403); res.end("Forbidden redirect host"); return; }
+          proxyTo(redirectUrl, redirectCount + 1);
+          return;
+        }
+        res.writeHead(finalRes.statusCode || 200, {
+          "content-type": finalRes.headers["content-type"] || "audio/mpeg",
+          "transfer-encoding": finalRes.headers["transfer-encoding"] || "chunked",
+          "accept-ranges": "none"
+        });
+        finalRes.pipe(res);
       });
-      proxyRes.pipe(res);
-    });
-    proxyReq.on("error", (err) => { res.writeHead(502); res.end("Proxy error: " + (err?.message || "unknown")); });
-    proxyReq.end();
+      finalReq.on("error", (err) => { res.writeHead(502); res.end("Proxy error: " + (err?.message || "unknown")); });
+      finalReq.end();
+    }
+    proxyTo(target, 0);
     return;
   }
   sendJson(res, 404, { error: "Not found" });
@@ -323,7 +347,7 @@ async function serveStatic(res, pathname) {
   const resolved = path.resolve(root, path.join(".", path.normalize(requested)));
   if (!resolved.startsWith(root + path.sep) && resolved !== root) { res.writeHead(403); res.end("Forbidden"); return; }
   const content = await readFile(resolved);
-  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com https://icecast.radiofrance.fr https://kexp-mp3-128.streamguys1.com https://*.stream.publicradio.org; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
+  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com https://icecast.radiofrance.fr https://kexp-mp3-128.streamguys1.com https://*.stream.publicradio.org https://abc.streamguys1.com https://playerservices.streamtheworld.com https://*.streamtheworld.com; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
   res.end(content);
 }
 http.createServer(async (req, res) => {
