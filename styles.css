@@ -528,6 +528,86 @@ body {
   border-color: var(--accent);
 }
 
+/* ─── Password generator ─── */
+.pw-gen-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.pw-length-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pw-length-control label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.pw-length-control input {
+  width: 60px;
+  height: 36px;
+  padding: 0 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  outline: none;
+}
+.pw-length-control input:focus {
+  border-color: var(--accent);
+}
+.pw-gen-row button {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.85rem;
+}
+.pw-result-box {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 10px;
+}
+.pw-result-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  outline: none;
+  min-width: 0;
+}
+.pw-result-box input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+.pw-result-box .icon-button {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+.pw-result-box .icon-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
 /* ─── Password manager row ─── */
 .pw-manager-row {
   display: flex;
@@ -557,89 +637,10 @@ body {
   background-color: var(--bg);
   color: var(--text);
 }
-
-/* ─── Mini Tools ─── */
-#minitools .card-inner { padding: 10px 14px; }
-#minitools .card-header { margin-bottom: 6px; }
-.tool-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.tool-tab {
-  height: 28px;
-  padding: 0 12px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-.tool-tab.active {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-.tool-tab:not(.active):hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text);
-  border-color: var(--border-strong);
-}
-.tool-panel {
-  animation: toolEnter 0.2s var(--ease-out) both;
-}
-.tool-panel[hidden] {
-  display: none;
-}
-@keyframes toolEnter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.tool-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.tool-input-row input,
-.tool-input-row textarea {
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  outline: none;
-}
-.tool-input-row input:focus,
-.tool-input-row textarea:focus {
-  border-color: var(--accent);
-}
-.tool-input-row button {
-  height: 36px;
+.pw-manager-row button {
+  height: 32px;
   padding: 0 14px;
   font-size: 0.8rem;
-}
-.tool-output-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.tool-output-row input {
-  flex: 1;
-  height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text);
-  font-family: monospace;
-  font-size: 0.85rem;
-  outline: none;
 }
 #jsonInput {
   width: 100%;
