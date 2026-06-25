@@ -529,118 +529,84 @@ body {
 }
 
 /* ─── Password generator ─── */
-.pw-gen-row {
+.pw-gen-bar {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
-.pw-length-control {
+.pw-length {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
-.pw-length-control label {
-  font-size: 0.65rem;
+.pw-length label {
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
-.pw-length-control input {
-  width: 60px;
-  height: 36px;
-  padding: 0 8px;
+.pw-length input {
+  width: 52px;
+  height: 32px;
+  padding: 0 6px;
   text-align: center;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  outline: none;
-}
-.pw-length-control input:focus {
-  border-color: var(--accent);
-}
-.pw-gen-row button {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 0.85rem;
-}
-.pw-result-box {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 8px 6px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  margin-bottom: 10px;
-}
-.pw-result-box input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--text);
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   outline: none;
-  min-width: 0;
 }
-.pw-result-box input::placeholder {
+.pw-length input:focus {
+  border-color: var(--accent);
+}
+.pw-gen-bar button {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 0.8rem;
+}
+.pw-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+}
+.pw-display span {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  word-break: break-all;
+  min-height: 1.2em;
+}
+.pw-display span.placeholder {
   color: var(--muted);
   font-weight: 400;
   font-size: 0.85rem;
+  letter-spacing: 0;
 }
-.pw-result-box .icon-button {
+.pw-display .icon-button {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--accent);
+  border-radius: 8px;
 }
-.pw-result-box .icon-button:hover {
+.pw-display .icon-button:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--accent);
   color: var(--accent-strong);
-}
-
-/* ─── Password manager row ─── */
-.pw-manager-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.pw-manager-row select {
-  height: 32px;
-  padding: 0 28px 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23958fac' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.pw-manager-row select option {
-  background-color: var(--bg);
-  color: var(--text);
-}
-.pw-manager-row button {
-  height: 32px;
-  padding: 0 14px;
-  font-size: 0.8rem;
 }
 #jsonInput {
   width: 100%;

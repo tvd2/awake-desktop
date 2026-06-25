@@ -1227,34 +1227,6 @@ if (scratchArea) {
   });
 }
 
-const pwManager = document.querySelector("#pwManager");
-const pwSave = document.querySelector("#pwSave");
-
-const pwManagerNames = {
-  keepassxc: "KeePassXC",
-  enpass: "Enpass",
-  bitwarden: "Bitwarden",
-  "1password": "1Password",
-  dashlane: "Dashlane"
-};
-
-if (pwSave) {
-  pwSave.addEventListener("click", () => {
-    if (!pwResult || !pwResult.value) {
-      showToast("Generate a password first", 2000);
-      return;
-    }
-    const manager = pwManager?.value || "";
-    navigator.clipboard.writeText(pwResult.value).then(() => {
-      if (manager && pwManagerNames[manager]) {
-        showToast("Copied. Open your " + pwManagerNames[manager] + " extension to save.", 3000);
-      } else {
-        showToast("Password copied!", 2000);
-      }
-    });
-  });
-}
-
 /* ─── Mini Tools ─── */
 const toolTabs = document.querySelectorAll(".tool-tab");
 const toolPanels = document.querySelectorAll(".tool-panel");
@@ -1287,13 +1259,16 @@ function generatePassword(len) {
 if (pwGenerate) {
   pwGenerate.addEventListener("click", () => {
     const len = Number(pwLength?.value) || 16;
-    if (pwResult) pwResult.value = generatePassword(len);
+    if (pwResult) {
+      pwResult.textContent = generatePassword(len);
+      pwResult.classList.remove("placeholder");
+    }
   });
 }
 if (pwCopy) {
   pwCopy.addEventListener("click", () => {
-    if (!pwResult || !pwResult.value) return;
-    navigator.clipboard.writeText(pwResult.value).then(() => showToast("Password copied!", 2000));
+    if (!pwResult || pwResult.classList.contains("placeholder")) return;
+    navigator.clipboard.writeText(pwResult.textContent).then(() => showToast("Password copied!", 2000));
   });
 }
 

@@ -179,29 +179,18 @@
             </div>
             <div class="tool-panels">
               <div class="tool-panel active" id="toolPassword">
-                <div class="pw-gen-row">
-                  <div class="pw-length-control">
+                <div class="pw-gen-bar">
+                  <div class="pw-length">
                     <label for="pwLength">Length</label>
                     <input id="pwLength" type="number" value="16" min="4" max="64" aria-label="Password length">
                   </div>
                   <button id="pwGenerate" type="button">Generate</button>
                 </div>
-                <div class="pw-result-box" id="pwResultBox">
-                  <input id="pwResult" type="text" readonly aria-label="Generated password" placeholder="Click Generate">
+                <div class="pw-display">
+                  <span id="pwResult" aria-label="Generated password">Click Generate</span>
                   <button id="pwCopy" class="icon-button" type="button" title="Copy to clipboard" aria-label="Copy password">
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
                   </button>
-                </div>
-                <div class="pw-manager-row">
-                  <select id="pwManager" aria-label="Save to password manager">
-                    <option value="" selected>Copy only</option>
-                    <option value="keepassxc">KeePassXC</option>
-                    <option value="enpass">Enpass</option>
-                    <option value="bitwarden">Bitwarden</option>
-                    <option value="1password">1Password</option>
-                    <option value="dashlane">Dashlane</option>
-                  </select>
-                  <button id="pwSave" type="button" class="secondary">Save</button>
                 </div>
               </div>
               <div class="tool-panel" id="toolColor" hidden>
