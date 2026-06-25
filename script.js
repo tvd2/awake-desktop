@@ -926,6 +926,425 @@ document.addEventListener("visibilitychange", async () => {
 });
 window.addEventListener("beforeunload", () => { if (wakeLock) wakeLock.release(); });
 
+/* ─── Hacker News ─── */
+const hnButton = document.querySelector("#hnButton");
+const hnStatus = document.querySelector("#hnStatus");
+const hnList = document.querySelector("#hnList");
+
+function createHNItem(item) {
+  const article = document.createElement("article");
+  article.className = "news-item";
+  article.dataset.url = item.url || "https://news.ycombinator.com/item?id=" + item.objectID;
+
+  const titleH3 = document.createElement("h3");
+  const link = document.createElement("a");
+  link.href = item.url || "https://news.ycombinator.com/item?id=" + item.objectID;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = item.title;
+  titleH3.appendChild(link);
+
+  const metaRow = document.createElement("div");
+  metaRow.className = "meta-row";
+  const metaP = document.createElement("p");
+  metaP.className = "muted";
+  metaP.textContent = (item.author || "") + " · " + (item.points || 0) + " pts";
+  const scoreSpan = document.createElement("span");
+  scoreSpan.className = "score";
+  scoreSpan.textContent = (item.num_comments || 0) + " comments";
+  metaP.appendChild(scoreSpan);
+  metaRow.appendChild(metaP);
+
+  article.appendChild(titleH3);
+  article.appendChild(metaRow);
+
+  article.addEventListener("click", (e) => {
+    if (window.getSelection().toString().length > 0 || article.classList.contains("dismissing")) return;
+    const isLinkClick = e.target.closest("a");
+    if (!isLinkClick) {
+      window.open(article.dataset.url, "_blank", "noopener,noreferrer");
+    }
+    article.classList.add("dismissing");
+    setTimeout(() => article.remove(), 300);
+  });
+
+  return article;
+}
+
+function createOzbargainItem(item) {
+  const article = document.createElement("article");
+  article.className = "news-item";
+  article.dataset.url = item.link;
+
+  const titleH3 = document.createElement("h3");
+  const link = document.createElement("a");
+  link.href = item.link;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = item.title;
+  titleH3.appendChild(link);
+
+  const metaRow = document.createElement("div");
+  metaRow.className = "meta-row";
+  const metaP = document.createElement("p");
+  metaP.className = "muted";
+  const published = item.pubDate ? new Date(item.pubDate) : null;
+  const time = published && !Number.isNaN(published.valueOf())
+    ? published.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : "";
+  metaP.textContent = (item.creator || "Ozbargain") + (time ? " · " + time : "");
+  metaRow.appendChild(metaP);
+
+  article.appendChild(titleH3);
+  article.appendChild(metaRow);
+
+  article.addEventListener("click", (e) => {
+    if (window.getSelection().toString().length > 0 || article.classList.contains("dismissing")) return;
+    const isLinkClick = e.target.closest("a");
+    if (!isLinkClick) {
+      window.open(article.dataset.url, "_blank", "noopener,noreferrer");
+    }
+    article.classList.add("dismissing");
+    setTimeout(() => article.remove(), 300);
+  });
+
+  return article;
+}
+
+const hnTitle = document.querySelector("#hnTitle");
+const hnTabs = document.querySelectorAll(".hn-tab");
+let activeHNSource = localStorage.getItem("awake-hn-source") || "hackernews";
+
+function setHNSource(source) {
+  activeHNSource = source;
+  localStorage.setItem("awake-hn-source", source);
+  hnTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.hnsource === source));
+  if (hnTitle) hnTitle.textContent = source === "hackernews" ? "Top stories" : "Top deals";
+  if (source === "hackernews") {
+    loadHackerNews();
+  } else {
+    loadOzbargain();
+  }
+}
+
+async function loadHackerNews() {
+  if (!hnButton || !hnList) return;
+  hnButton.disabled = true;
+  hnStatus.textContent = "Loading Hacker News...";
+  hnList.innerHTML = "";
+  for (let i = 0; i < 5; i++) {
+    const sk = document.createElement("div");
+    sk.className = "news-item skeleton";
+    sk.setAttribute("aria-hidden", "true");
+    sk.innerHTML = '<div class="skeleton" style="height:1em;width:85%;margin-bottom:6px"></div><div class="skeleton" style="height:0.8em;width:40%"></div>';
+    hnList.append(sk);
+  }
+  try {
+    const res = await fetch("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=10");
+    if (!res.ok) throw new Error("HN failed.");
+    const data = await res.json();
+    const items = data.hits || [];
+    hnList.innerHTML = "";
+    items.forEach((item) => {
+      hnList.appendChild(createHNItem(item));
+    });
+    hnStatus.textContent = items.length + " top stories from Hacker News.";
+  } catch (error) {
+    hnStatus.textContent = "Could not load Hacker News.";
+    hnList.innerHTML = "";
+  } finally {
+    hnButton.disabled = false;
+  }
+}
+
+async function loadOzbargain() {
+  if (!hnButton || !hnList) return;
+  hnButton.disabled = true;
+  hnStatus.textContent = "Loading Ozbargain...";
+  hnList.innerHTML = "";
+  for (let i = 0; i < 5; i++) {
+    const sk = document.createElement("div");
+    sk.className = "news-item skeleton";
+    sk.setAttribute("aria-hidden", "true");
+    sk.innerHTML = '<div class="skeleton" style="height:1em;width:85%;margin-bottom:6px"></div><div class="skeleton" style="height:0.8em;width:40%"></div>';
+    hnList.append(sk);
+  }
+  let xml = "";
+  try {
+    // Try direct fetch first
+    let res = await fetch("https://www.ozbargain.com.au/deals/feed");
+    if (!res.ok) throw new Error("Direct failed");
+    xml = await res.text();
+  } catch (e) {
+    // Fallback: CORS proxy
+    try {
+      const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent("https://www.ozbargain.com.au/deals/feed"));
+      if (!res.ok) throw new Error("Proxy failed");
+      xml = await res.text();
+    } catch (e2) {
+      hnStatus.textContent = "Could not load Ozbargain.";
+      hnList.innerHTML = "";
+      hnButton.disabled = false;
+      return;
+    }
+  }
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, "application/xml");
+    const items = Array.from(doc.querySelectorAll("item")).slice(0, 30).map((item) => ({
+      title: item.querySelector("title")?.textContent || "Deal",
+      link: item.querySelector("link")?.textContent || "",
+      pubDate: item.querySelector("pubDate")?.textContent || "",
+      creator: item.querySelector("creator")?.textContent || item.querySelector("author")?.textContent || ""
+    }));
+    hnList.innerHTML = "";
+    items.forEach((item) => {
+      hnList.appendChild(createOzbargainItem(item));
+    });
+    hnStatus.textContent = items.length + " top deals from Ozbargain.";
+  } catch (error) {
+    hnStatus.textContent = "Could not parse Ozbargain feed.";
+    hnList.innerHTML = "";
+  } finally {
+    hnButton.disabled = false;
+  }
+}
+
+if (hnButton) {
+  hnButton.addEventListener("click", () => {
+    if (activeHNSource === "hackernews") {
+      loadHackerNews();
+    } else {
+      loadOzbargain();
+    }
+  });
+}
+
+hnTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setHNSource(tab.dataset.hnsource));
+});
+
+/* ─── System Stats ─── */
+const statBattery = document.querySelector("#statBattery");
+const statNetwork = document.querySelector("#statNetwork");
+const statMemory = document.querySelector("#statMemory");
+const statCores = document.querySelector("#statCores");
+
+async function updateSystemStats() {
+  if (statCores) statCores.textContent = navigator.hardwareConcurrency || "--";
+
+  if ("getBattery" in navigator) {
+    try {
+      const battery = await navigator.getBattery();
+      const level = Math.round(battery.level * 100) + "%";
+      const charging = battery.charging ? " (charging)" : "";
+      if (statBattery) statBattery.textContent = level + charging;
+      battery.addEventListener("levelchange", () => {
+        const l = Math.round(battery.level * 100) + "%";
+        const c = battery.charging ? " (charging)" : "";
+        if (statBattery) statBattery.textContent = l + c;
+      });
+      battery.addEventListener("chargingchange", () => {
+        const l = Math.round(battery.level * 100) + "%";
+        const c = battery.charging ? " (charging)" : "";
+        if (statBattery) statBattery.textContent = l + c;
+      });
+    } catch (e) {
+      if (statBattery) statBattery.textContent = "N/A";
+    }
+  } else {
+    if (statBattery) statBattery.textContent = "N/A";
+  }
+
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (conn && statNetwork) {
+    const type = conn.effectiveType || "--";
+    const down = conn.downlink ? " (~" + conn.downlink + " Mbps)" : "";
+    statNetwork.textContent = type + down;
+    conn.addEventListener("change", () => {
+      const t = conn.effectiveType || "--";
+      const d = conn.downlink ? " (~" + conn.downlink + " Mbps)" : "";
+      statNetwork.textContent = t + d;
+    });
+  } else if (statNetwork) {
+    statNetwork.textContent = "online";
+  }
+
+  const perf = performance || window.performance;
+  if (perf && perf.memory && statMemory) {
+    const used = Math.round(perf.memory.usedJSHeapSize / 1048576);
+    const total = Math.round(perf.memory.totalJSHeapSize / 1048576);
+    statMemory.textContent = used + " MB";
+  } else if (statMemory) {
+    statMemory.textContent = "N/A";
+  }
+}
+
+/* ─── Scratchpad (collapsible) ─── */
+const scratchArea = document.querySelector("#scratchArea");
+const scratchSaved = document.querySelector("#scratchSaved");
+const scratchToggle = document.querySelector("#scratchToggle");
+const scratchHeader = document.querySelector("#scratchHeader");
+const scratchContent = document.querySelector("#scratchContent");
+const scratchpad = document.querySelector("#scratchpad");
+
+function setScratchpadCollapsed(collapsed) {
+  if (!scratchpad || !scratchContent || !scratchToggle) return;
+  scratchpad.classList.toggle("collapsed", collapsed);
+  scratchpad.classList.toggle("expanded", !collapsed);
+  scratchContent.hidden = collapsed;
+  scratchToggle.setAttribute("title", collapsed ? "Expand" : "Collapse");
+  scratchToggle.setAttribute("aria-label", collapsed ? "Expand scratchpad" : "Collapse scratchpad");
+  localStorage.setItem("awake-scratchpad-collapsed", String(collapsed));
+}
+
+if (scratchHeader) {
+  scratchHeader.addEventListener("click", () => {
+    const isCollapsed = !scratchContent || scratchContent.hidden;
+    setScratchpadCollapsed(!isCollapsed);
+  });
+}
+
+if (scratchArea) {
+  const saved = localStorage.getItem("awake-scratchpad");
+  if (saved) scratchArea.value = saved;
+
+  let saveDebounce;
+  scratchArea.addEventListener("input", () => {
+    if (scratchSaved) {
+      scratchSaved.classList.remove("visible");
+      scratchSaved.textContent = "Typing...";
+    }
+    clearTimeout(saveDebounce);
+    saveDebounce = setTimeout(() => {
+      localStorage.setItem("awake-scratchpad", scratchArea.value);
+      if (scratchSaved) {
+        scratchSaved.textContent = "Saved";
+        scratchSaved.classList.add("visible");
+        setTimeout(() => scratchSaved.classList.remove("visible"), 1500);
+      }
+    }, 600);
+  });
+}
+
+const pwManager = document.querySelector("#pwManager");
+const pwSave = document.querySelector("#pwSave");
+
+const pwManagerNames = {
+  keepassxc: "KeePassXC",
+  enpass: "Enpass",
+  bitwarden: "Bitwarden",
+  "1password": "1Password",
+  dashlane: "Dashlane"
+};
+
+if (pwSave) {
+  pwSave.addEventListener("click", () => {
+    if (!pwResult || !pwResult.value) {
+      showToast("Generate a password first", 2000);
+      return;
+    }
+    const manager = pwManager?.value || "";
+    navigator.clipboard.writeText(pwResult.value).then(() => {
+      if (manager && pwManagerNames[manager]) {
+        showToast("Copied. Open your " + pwManagerNames[manager] + " extension to save.", 3000);
+      } else {
+        showToast("Password copied!", 2000);
+      }
+    });
+  });
+}
+
+/* ─── Mini Tools ─── */
+const toolTabs = document.querySelectorAll(".tool-tab");
+const toolPanels = document.querySelectorAll(".tool-panel");
+
+toolTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const tool = tab.dataset.tool;
+    toolTabs.forEach((t) => t.classList.toggle("active", t === tab));
+    toolPanels.forEach((p) => {
+      p.hidden = p.id !== "tool" + tool.charAt(0).toUpperCase() + tool.slice(1);
+    });
+  });
+});
+
+// Password generator
+const pwLength = document.querySelector("#pwLength");
+const pwGenerate = document.querySelector("#pwGenerate");
+const pwResult = document.querySelector("#pwResult");
+const pwCopy = document.querySelector("#pwCopy");
+
+function generatePassword(len) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+  let pass = "";
+  for (let i = 0; i < len; i++) {
+    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pass;
+}
+
+if (pwGenerate) {
+  pwGenerate.addEventListener("click", () => {
+    const len = Number(pwLength?.value) || 16;
+    if (pwResult) pwResult.value = generatePassword(len);
+  });
+}
+if (pwCopy) {
+  pwCopy.addEventListener("click", () => {
+    if (!pwResult || !pwResult.value) return;
+    navigator.clipboard.writeText(pwResult.value).then(() => showToast("Password copied!", 2000));
+  });
+}
+
+// Color converter
+const colorHex = document.querySelector("#colorHex");
+const colorConvert = document.querySelector("#colorConvert");
+const colorResult = document.querySelector("#colorResult");
+const colorSwatch = document.querySelector("#colorSwatch");
+
+function hexToRgb(hex) {
+  hex = hex.replace(/^#/, "");
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  const num = parseInt(hex, 16);
+  if (isNaN(num) || hex.length !== 6) return null;
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
+function doColorConvert() {
+  if (!colorHex) return;
+  const hex = colorHex.value.trim();
+  const rgb = hexToRgb(hex);
+  if (rgb && colorResult) {
+    colorResult.textContent = "rgb(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ")";
+    if (colorSwatch) colorSwatch.style.background = "rgb(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ")";
+  } else if (colorResult) {
+    colorResult.textContent = "Invalid hex";
+  }
+}
+
+if (colorConvert) colorConvert.addEventListener("click", doColorConvert);
+if (colorHex) colorHex.addEventListener("keydown", (e) => { if (e.key === "Enter") doColorConvert(); });
+
+// JSON formatter
+const jsonInput = document.querySelector("#jsonInput");
+const jsonFormat = document.querySelector("#jsonFormat");
+const jsonOutput = document.querySelector("#jsonOutput");
+
+if (jsonFormat) {
+  jsonFormat.addEventListener("click", () => {
+    if (!jsonInput || !jsonOutput) return;
+    try {
+      const parsed = JSON.parse(jsonInput.value);
+      jsonOutput.textContent = JSON.stringify(parsed, null, 2);
+      jsonOutput.style.color = "var(--text)";
+    } catch (e) {
+      jsonOutput.textContent = "Invalid JSON: " + e.message;
+      jsonOutput.style.color = "var(--coral, #ff6b6b)";
+    }
+  });
+}
+
 /* ─── Init ─── */
 if (localTab) localTab.hidden = true;
 setTheme(activeTheme);
@@ -938,5 +1357,13 @@ const savedNewsInterval = localStorage.getItem("awake-news-interval") || "0";
 newsIntervalSelect.value = savedNewsInterval;
 setNewsInterval(savedNewsInterval);
 loadNews();
+setHNSource(activeHNSource);
+updateSystemStats();
+const scratchCollapsed = localStorage.getItem("awake-scratchpad-collapsed");
+if (scratchCollapsed !== null) {
+  setScratchpadCollapsed(scratchCollapsed === "true");
+} else {
+  setScratchpadCollapsed(true);
+}
 loadRadioChannels();
 initTilt();
