@@ -372,9 +372,6 @@ body {
 #hackernews { flex: 1 1 0; min-height: 0; overflow: hidden; }
 #hackernews .card-inner { padding: 10px 14px; }
 #hackernews .card-header { margin-bottom: 6px; }
-#minitools { flex: 0 0 auto; overflow: hidden; }
-#minitools .card-inner { padding: 10px 14px; }
-#minitools .card-header { margin-bottom: 6px; }
 
 .right-stack {
   grid-area: right;
@@ -643,7 +640,6 @@ body {
 #scratchpad { animation-delay: 0.26s; }
 #radio { animation-delay: 0.28s; }
 #hackernews { animation-delay: 0.12s; }
-#minitools { animation-delay: 0.14s; }
 
 .bento-card {
   position: relative;
@@ -1357,7 +1353,6 @@ select optgroup {
   .right-stack { gap: 10px; }
   #news { flex: 1 1 auto; }
   #hackernews { max-height: 220px; }
-  #minitools { flex: none; }
   #scratchpad { flex: none; }
   #systemstats { flex: none; }
 }
@@ -1575,17 +1570,28 @@ select optgroup {
   }
 
   #news {
-    max-height: none;
-    overflow: visible;
+    max-height: 55vh;
+    overflow: hidden;
+  }
+  #news .card-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+  #news .news-list {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
   }
 
   #hackernews {
-    max-height: none;
+    max-height: 45vh;
+    overflow: hidden;
   }
-
-  .news-list {
-    overflow-y: visible;
-    flex: none;
+  #hackernews .card-inner {
+    height: 100%;
+    overflow: hidden;
   }
 
   .right-stack {
@@ -1616,7 +1622,7 @@ select optgroup {
     flex: none;
   }
 
-  #systemstats, #scratchpad, #radio, #minitools {
+  #systemstats, #scratchpad, #radio {
     flex: none;
   }
 
