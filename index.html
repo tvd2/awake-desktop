@@ -163,52 +163,6 @@
             <div id="hnList" class="news-list" aria-live="polite"></div>
           </div>
         </article>
-
-        <article class="bento-card" id="minitools" data-tilt>
-          <div class="card-inner">
-            <div class="card-header">
-              <div>
-                <p class="eyebrow">Swiss Army</p>
-                <h2>Mini tools</h2>
-              </div>
-            </div>
-            <div class="tool-tabs" role="tablist" aria-label="Mini tools">
-              <button class="tool-tab active" type="button" data-tool="password">Pass</button>
-              <button class="tool-tab" type="button" data-tool="color">Color</button>
-              <button class="tool-tab" type="button" data-tool="json">JSON</button>
-            </div>
-            <div class="tool-panels">
-              <div class="tool-panel active" id="toolPassword">
-                <div class="pw-gen-bar">
-                  <div class="pw-length">
-                    <label for="pwLength">Length</label>
-                    <input id="pwLength" type="number" value="16" min="4" max="64" aria-label="Password length">
-                  </div>
-                  <button id="pwGenerate" type="button">Generate</button>
-                </div>
-                <div class="pw-display">
-                  <span id="pwResult" aria-label="Generated password">Click Generate</span>
-                  <button id="pwCopy" class="icon-button" type="button" title="Copy to clipboard" aria-label="Copy password">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                  </button>
-                </div>
-              </div>
-              <div class="tool-panel" id="toolColor" hidden>
-                <div class="tool-input-row">
-                  <input id="colorHex" type="text" placeholder="#00d4aa" value="#00d4aa" aria-label="Hex color">
-                  <button id="colorConvert" type="button">→ RGB</button>
-                </div>
-                <p id="colorResult" class="muted" style="margin-top:8px;font-size:0.85rem">rgb(0, 212, 170)</p>
-                <div class="color-swatch" id="colorSwatch" style="margin-top:8px;width:100%;height:24px;border-radius:8px;background:#00d4aa;border:1px solid var(--border)"></div>
-              </div>
-              <div class="tool-panel" id="toolJson" hidden>
-                <textarea id="jsonInput" rows="4" placeholder='Paste JSON here...' aria-label="JSON input" style="width:100%;margin-top:4px;font-family:monospace;font-size:0.8rem"></textarea>
-                <button id="jsonFormat" type="button" style="margin-top:8px">Format</button>
-                <pre id="jsonOutput" class="muted" style="margin-top:8px;font-size:0.75rem;overflow-x:auto;white-space:pre-wrap"></pre>
-              </div>
-            </div>
-          </div>
-        </article>
       </aside>
 
       <!-- Right stack: Wallpaper, Radio, Weather, System Stats, Scratchpad -->
