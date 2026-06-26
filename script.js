@@ -1172,9 +1172,10 @@ async function updateSystemStats() {
 
   const perf = performance || window.performance;
   if (perf && perf.memory && statMemory) {
-    const used = Math.round(perf.memory.usedJSHeapSize / 1048576);
-    const total = Math.round(perf.memory.totalJSHeapSize / 1048576);
-    statMemory.textContent = used + " MB";
+    const used = perf.memory.usedJSHeapSize;
+    const total = perf.memory.totalJSHeapSize;
+    const pct = total ? Math.round((used / total) * 100) : 0;
+    statMemory.textContent = pct + "%";
   } else if (statMemory) {
     statMemory.textContent = "N/A";
   }
