@@ -926,59 +926,19 @@ document.addEventListener("visibilitychange", async () => {
 });
 window.addEventListener("beforeunload", () => { if (wakeLock) wakeLock.release(); });
 
-/* ─── Hacker News ─── */
-const hnButton = document.querySelector("#hnButton");
-const hnStatus = document.querySelector("#hnStatus");
-const hnList = document.querySelector("#hnList");
-
-function createHNItem(item) {
-  const article = document.createElement("article");
-  article.className = "news-item";
-  article.dataset.url = item.url || "https://news.ycombinator.com/item?id=" + item.objectID;
-
-  const titleH3 = document.createElement("h3");
-  const link = document.createElement("a");
-  link.href = item.url || "https://news.ycombinator.com/item?id=" + item.objectID;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.textContent = item.title;
-  titleH3.appendChild(link);
-
-  const metaRow = document.createElement("div");
-  metaRow.className = "meta-row";
-  const metaP = document.createElement("p");
-  metaP.className = "muted";
-  metaP.textContent = (item.author || "") + " · " + (item.points || 0) + " pts";
-  const scoreSpan = document.createElement("span");
-  scoreSpan.className = "score";
-  scoreSpan.textContent = (item.num_comments || 0) + " comments";
-  metaP.appendChild(scoreSpan);
-  metaRow.appendChild(metaP);
-
-  article.appendChild(titleH3);
-  article.appendChild(metaRow);
-
-  article.addEventListener("click", (e) => {
-    if (window.getSelection().toString().length > 0 || article.classList.contains("dismissing")) return;
-    const isLinkClick = e.target.closest("a");
-    if (!isLinkClick) {
-      window.open(article.dataset.url, "_blank", "noopener,noreferrer");
-    }
-    article.classList.add("dismissing");
-    setTimeout(() => article.remove(), 300);
-  });
-
-  return article;
-}
+/* ─── Deals ─── */
+const dealsButton = document.querySelector("#dealsButton");
+const dealsStatus = document.querySelector("#dealsStatus");
+const dealsList = document.querySelector("#dealsList");
 
 function createOzbargainItem(item) {
   const article = document.createElement("article");
   article.className = "news-item";
-  article.dataset.url = item.link;
+  article.dataset.url = item.url;
 
   const titleH3 = document.createElement("h3");
   const link = document.createElement("a");
-  link.href = item.link;
+  link.href = item.url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.textContent = item.title;
@@ -988,7 +948,7 @@ function createOzbargainItem(item) {
   metaRow.className = "meta-row";
   const metaP = document.createElement("p");
   metaP.className = "muted";
-  const published = item.pubDate ? new Date(item.pubDate) : null;
+  const published = item.publishedAt ? new Date(item.publishedAt) : null;
   const time = published && !Number.isNaN(published.valueOf())
     ? published.toLocaleDateString(undefined, { month: "short", day: "numeric" })
     : "";
@@ -1011,118 +971,38 @@ function createOzbargainItem(item) {
   return article;
 }
 
-const hnTitle = document.querySelector("#hnTitle");
-const hnTabs = document.querySelectorAll(".hn-tab");
-let activeHNSource = localStorage.getItem("awake-hn-source") || "hackernews";
-
-function setHNSource(source) {
-  activeHNSource = source;
-  localStorage.setItem("awake-hn-source", source);
-  hnTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.hnsource === source));
-  if (hnTitle) hnTitle.textContent = source === "hackernews" ? "Top stories" : "Top deals";
-  if (source === "hackernews") {
-    loadHackerNews();
-  } else {
-    loadOzbargain();
-  }
-}
-
-async function loadHackerNews() {
-  if (!hnButton || !hnList) return;
-  hnButton.disabled = true;
-  hnStatus.textContent = "Loading Hacker News...";
-  hnList.innerHTML = "";
-  for (let i = 0; i < 5; i++) {
-    const sk = document.createElement("div");
-    sk.className = "news-item skeleton";
-    sk.setAttribute("aria-hidden", "true");
-    sk.innerHTML = '<div class="skeleton" style="height:1em;width:85%;margin-bottom:6px"></div><div class="skeleton" style="height:0.8em;width:40%"></div>';
-    hnList.append(sk);
-  }
-  try {
-    const res = await fetch("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=10");
-    if (!res.ok) throw new Error("HN failed.");
-    const data = await res.json();
-    const items = data.hits || [];
-    hnList.innerHTML = "";
-    items.forEach((item) => {
-      hnList.appendChild(createHNItem(item));
-    });
-    hnStatus.textContent = items.length + " top stories from Hacker News.";
-  } catch (error) {
-    hnStatus.textContent = "Could not load Hacker News.";
-    hnList.innerHTML = "";
-  } finally {
-    hnButton.disabled = false;
-  }
-}
-
 async function loadOzbargain() {
-  if (!hnButton || !hnList) return;
-  hnButton.disabled = true;
-  hnStatus.textContent = "Loading Ozbargain...";
-  hnList.innerHTML = "";
+  if (!dealsButton || !dealsList) return;
+  dealsButton.disabled = true;
+  dealsStatus.textContent = "Loading deals...";
+  dealsList.innerHTML = "";
   for (let i = 0; i < 5; i++) {
     const sk = document.createElement("div");
     sk.className = "news-item skeleton";
     sk.setAttribute("aria-hidden", "true");
     sk.innerHTML = '<div class="skeleton" style="height:1em;width:85%;margin-bottom:6px"></div><div class="skeleton" style="height:0.8em;width:40%"></div>';
-    hnList.append(sk);
-  }
-  let xml = "";
-  try {
-    // Try direct fetch first
-    let res = await fetch("https://www.ozbargain.com.au/deals/feed");
-    if (!res.ok) throw new Error("Direct failed");
-    xml = await res.text();
-  } catch (e) {
-    // Fallback: CORS proxy
-    try {
-      const res = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent("https://www.ozbargain.com.au/deals/feed"));
-      if (!res.ok) throw new Error("Proxy failed");
-      xml = await res.text();
-    } catch (e2) {
-      hnStatus.textContent = "Could not load Ozbargain.";
-      hnList.innerHTML = "";
-      hnButton.disabled = false;
-      return;
-    }
+    dealsList.append(sk);
   }
   try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, "application/xml");
-    const items = Array.from(doc.querySelectorAll("item")).slice(0, 30).map((item) => ({
-      title: item.querySelector("title")?.textContent || "Deal",
-      link: item.querySelector("link")?.textContent || "",
-      pubDate: item.querySelector("pubDate")?.textContent || "",
-      creator: item.querySelector("creator")?.textContent || item.querySelector("author")?.textContent || ""
-    }));
-    hnList.innerHTML = "";
+    const res = await fetch("/api/ozbargain");
+    if (!res.ok) throw new Error("Deals request failed.");
+    const items = await res.json();
+    dealsList.innerHTML = "";
     items.forEach((item) => {
-      hnList.appendChild(createOzbargainItem(item));
+      dealsList.appendChild(createOzbargainItem(item));
     });
-    hnStatus.textContent = items.length + " top deals from Ozbargain.";
+    dealsStatus.textContent = items.length + " top deals from OzBargain.";
   } catch (error) {
-    hnStatus.textContent = "Could not parse Ozbargain feed.";
-    hnList.innerHTML = "";
+    dealsStatus.textContent = error?.message || "Could not load deals.";
+    dealsList.innerHTML = "";
   } finally {
-    hnButton.disabled = false;
+    dealsButton.disabled = false;
   }
 }
 
-if (hnButton) {
-  hnButton.addEventListener("click", () => {
-    if (activeHNSource === "hackernews") {
-      loadHackerNews();
-    } else {
-      loadOzbargain();
-    }
-  });
+if (dealsButton) {
+  dealsButton.addEventListener("click", loadOzbargain);
 }
-
-hnTabs.forEach((tab) => {
-  tab.addEventListener("click", () => setHNSource(tab.dataset.hnsource));
-});
 
 /* ─── System Stats ─── */
 const statBattery = document.querySelector("#statBattery");
@@ -1240,7 +1120,7 @@ const savedNewsInterval = localStorage.getItem("awake-news-interval") || "0";
 newsIntervalSelect.value = savedNewsInterval;
 setNewsInterval(savedNewsInterval);
 loadNews();
-setHNSource(activeHNSource);
+loadOzbargain();
 updateSystemStats();
 const scratchCollapsed = localStorage.getItem("awake-scratchpad-collapsed");
 if (scratchCollapsed !== null) {

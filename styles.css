@@ -369,9 +369,9 @@ body {
 #news { flex: 1 1 0; min-height: 0; overflow: hidden; }
 #news .card-inner { padding: 10px 14px; }
 #news .card-header { margin-bottom: 6px; }
-#hackernews { flex: 1 1 0; min-height: 0; overflow: hidden; }
-#hackernews .card-inner { padding: 10px 14px; }
-#hackernews .card-header { margin-bottom: 6px; }
+#deals { flex: 1 1 0; min-height: 0; overflow: hidden; }
+#deals .card-inner { padding: 10px 14px; }
+#deals .card-header { margin-bottom: 6px; }
 
 .right-stack {
   grid-area: right;
@@ -563,83 +563,47 @@ body {
   color: var(--accent);
 }
 
-/* ─── Hacker News tabs & list ─── */
-.hn-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel);
-}
-.hn-tab {
-  height: 28px;
-  padding: 0 10px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-  white-space: nowrap;
-}
-.hn-tab.active {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-.hn-tab:not(.active):hover {
-  background: var(--panel-hover);
-  color: var(--text);
-}
-
-#hackernews .news-list {
+/* ─── Deals list ─── */
+#deals .news-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
-#hackernews .card-inner {
+#deals .card-inner {
   display: flex;
   flex-direction: column;
 }
-#hackernews .news-item {
+#deals .news-item {
   padding: 6px 8px;
   gap: 2px;
 }
-#hackernews .news-item h3 {
+#deals .news-item h3 {
   font-size: 0.8rem;
   line-height: 1.25;
   margin: 0;
 }
-#hackernews .news-item .meta-row {
+#deals .news-item .meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 1px;
 }
-#hackernews .news-item .muted {
+#deals .news-item .muted {
   font-size: 0.65rem;
   line-height: 1.2;
   margin: 0;
-}
-#hackernews .news-item .score {
-  color: var(--accent);
-  font-size: 0.65rem;
-  font-weight: 600;
-  margin-left: 4px;
 }
 
 /* ─── Animation delays for new cards ─── */
 .bento > .bento-card:nth-child(1) { animation-delay: 0.05s; }
 .bento > .bento-card:nth-child(2) { animation-delay: 0.1s; }
 #news { animation-delay: 0.1s; }
+#deals { animation-delay: 0.12s; }
 #wallpaper { animation-delay: 0.15s; }
 #weather { animation-delay: 0.2s; }
 #systemstats { animation-delay: 0.22s; }
 #scratchpad { animation-delay: 0.26s; }
 #radio { animation-delay: 0.28s; }
-#hackernews { animation-delay: 0.12s; }
 
 .bento-card {
   position: relative;
@@ -1352,7 +1316,7 @@ select optgroup {
   .left-stack { gap: 10px; }
   .right-stack { gap: 10px; }
   #news { flex: 1 1 auto; }
-  #hackernews { max-height: 220px; }
+  #deals { max-height: 220px; }
   #scratchpad { flex: none; }
   #systemstats { flex: none; }
 }
@@ -1585,11 +1549,11 @@ select optgroup {
     min-height: 0;
   }
 
-  #hackernews {
+  #deals {
     max-height: 45vh;
     overflow: hidden;
   }
-  #hackernews .card-inner {
+  #deals .card-inner {
     height: 100%;
     overflow: hidden;
   }

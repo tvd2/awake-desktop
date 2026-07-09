@@ -202,8 +202,18 @@ function sendJson(res, status, body) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   res.end(JSON.stringify(body));
 }
+function decodeHtmlEntities(text) {
+  return String(text || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
 function textFromXml(value) {
-  return String(value || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, "").trim();
+  return decodeHtmlEntities(String(value || "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, "").trim());
 }
 function tag(block, name) {
   const match = block.match(new RegExp("<" + name + "[^>]*>([\\s\\S]*?)<\\/" + name + ">", "i"));
@@ -215,6 +225,14 @@ function parseRss(xml, sourceFallback) {
     title: tag(block, "title"),
     url: tag(block, "link"),
     publishedAt: tag(block, "pubDate")
+  })).filter((item) => item.title && item.url);
+}
+function parseOzbargainRss(xml) {
+  return [...xml.matchAll(/<item[\s\S]*?<\/item>/gi)].slice(0, 30).map(([block]) => ({
+    title: tag(block, "title"),
+    url: tag(block, "link"),
+    publishedAt: tag(block, "pubDate"),
+    creator: tag(block, "dc:creator") || tag(block, "creator") || "Ozbargain"
   })).filter((item) => item.title && item.url);
 }
 async function fetchJson(url) {
@@ -272,6 +290,10 @@ async function handleApi(req, res, url) {
     rssUrl.searchParams.set("gl", code);
     rssUrl.searchParams.set("ceid", code + ":" + profile.hl);
     sendJson(res, 200, parseRss(await fetchText(rssUrl), category === "local" ? (city || country || "Local news") : category));
+    return;
+  }
+  if (url.pathname === "/api/ozbargain") {
+    sendJson(res, 200, parseOzbargainRss(await fetchText("https://www.ozbargain.com.au/deals/feed")));
     return;
   }
   if (url.pathname === "/api/radio") {
@@ -347,7 +369,7 @@ async function serveStatic(res, pathname) {
   const resolved = path.resolve(root, path.join(".", path.normalize(requested)));
   if (!resolved.startsWith(root + path.sep) && resolved !== root) { res.writeHead(403); res.end("Forbidden"); return; }
   const content = await readFile(resolved);
-  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com https://hn.algolia.com https://www.ozbargain.com.au https://api.allorigins.win; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com https://icecast.radiofrance.fr https://kexp-mp3-128.streamguys1.com https://*.stream.publicradio.org https://abc.streamguys1.com https://playerservices.streamtheworld.com https://*.streamtheworld.com; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
+  res.writeHead(200, { "content-type": types[path.extname(resolved)] || "application/octet-stream", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer", "x-frame-options": "DENY", "content-security-policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.open-meteo.com; media-src 'self' https://stream.radioparadise.com https://stream.revma.ihrhls.com https://*.somafm.com https://icecast.radiofrance.fr https://kexp-mp3-128.streamguys1.com https://*.stream.publicradio.org https://abc.streamguys1.com https://playerservices.streamtheworld.com https://*.streamtheworld.com; img-src 'self' data: https://picsum.photos https://*.picsum.photos https://*.somafm.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" });
   res.end(content);
 }
 http.createServer(async (req, res) => {
