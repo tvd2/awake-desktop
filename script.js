@@ -14,6 +14,7 @@ const newsButton = document.querySelector("#newsButton");
 const newsStatus = document.querySelector("#newsStatus");
 const newsList = document.querySelector("#newsList");
 const themeButtons = document.querySelectorAll(".theme-option");
+const layoutOptions = document.querySelectorAll(".layout-option");
 const colorPicker = document.querySelector("#colorPicker");
 const categoryButtons = document.querySelectorAll(".tab");
 const languageSelect = document.querySelector("#languageSelect");
@@ -42,6 +43,10 @@ let activeCategory = "technology";
 let activeLanguage = localStorage.getItem("awake-news-language") || "en";
 let wallpaperShuffleCount = Number(localStorage.getItem("awake-wallpaper-shuffle") || 0);
 let activeTheme = localStorage.getItem("awake-theme") || "dark";
+let activeLayout = localStorage.getItem("awake-layout") || "bento";
+let focusRotationTimer = null;
+let focusRotationIndex = 0;
+const focusSources = ["news", "deals"];
 let place = { label: "", city: "", country: "", countryCode: "" };
 let lastNewsItems = [];
 let wallpaperTimer = null;
@@ -1004,6 +1009,80 @@ if (dealsButton) {
   dealsButton.addEventListener("click", loadOzbargain);
 }
 
+/* ─── Layouts ─── */
+const focusList = document.querySelector("#focusList");
+
+function updateFocusCard(source) {
+  const focusEyebrow = document.querySelector("#focusEyebrow");
+  const focusTitle = document.querySelector("#focusTitle");
+  const focusStatus = document.querySelector("#focusStatus");
+  if (!focusList) return;
+  if (source === "news") {
+    if (focusEyebrow) focusEyebrow.textContent = "Headlines";
+    if (focusTitle) focusTitle.textContent = "News scan";
+    if (focusStatus) focusStatus.textContent = newsStatus.textContent;
+    focusList.innerHTML = newsList.innerHTML;
+  } else {
+    if (focusEyebrow) focusEyebrow.textContent = "Deals";
+    if (focusTitle) focusTitle.textContent = "Top deals";
+    if (focusStatus) focusStatus.textContent = dealsStatus.textContent;
+    focusList.innerHTML = dealsList.innerHTML;
+  }
+}
+
+function rotateFocusCard() {
+  focusRotationIndex = (focusRotationIndex + 1) % focusSources.length;
+  updateFocusCard(focusSources[focusRotationIndex]);
+}
+
+function clearFocusRotation() {
+  if (focusRotationTimer) {
+    clearInterval(focusRotationTimer);
+    focusRotationTimer = null;
+  }
+}
+
+function setLayout(layout) {
+  const validLayouts = ["bento", "compact", "focus", "newsroom"];
+  if (!validLayouts.includes(layout)) layout = "bento";
+  activeLayout = layout;
+  document.body.classList.remove("layout-bento", "layout-compact", "layout-focus", "layout-newsroom");
+  document.body.classList.add("layout-" + layout);
+  localStorage.setItem("awake-layout", layout);
+  layoutOptions.forEach((button) => button.classList.toggle("active", button.dataset.layout === layout));
+
+  clearFocusRotation();
+  const focusCard = document.querySelector("#focusCard");
+  if (focusCard) focusCard.hidden = layout !== "focus";
+
+  if (layout === "focus") {
+    focusRotationIndex = 0;
+    updateFocusCard(focusSources[0]);
+    focusRotationTimer = setInterval(rotateFocusCard, 30000);
+  }
+}
+
+layoutOptions.forEach((button) =>
+  button.addEventListener("click", () => setLayout(button.dataset.layout))
+);
+const focusNext = document.querySelector("#focusNext");
+if (focusNext) {
+  focusNext.addEventListener("click", rotateFocusCard);
+}
+if (focusList) {
+  focusList.addEventListener("click", (e) => {
+    const article = e.target.closest(".news-item");
+    if (!article || article.classList.contains("dismissing")) return;
+    if (window.getSelection().toString().length > 0) return;
+    const isLinkClick = e.target.closest("a");
+    if (!isLinkClick) {
+      window.open(article.dataset.url, "_blank", "noopener,noreferrer");
+    }
+    article.classList.add("dismissing");
+    setTimeout(() => article.remove(), 300);
+  });
+}
+
 /* ─── System Stats ─── */
 const statBattery = document.querySelector("#statBattery");
 const statNetwork = document.querySelector("#statNetwork");
@@ -1111,6 +1190,7 @@ if (scratchArea) {
 /* ─── Init ─── */
 if (localTab) localTab.hidden = true;
 setTheme(activeTheme);
+setLayout(activeLayout);
 setAccent(localStorage.getItem("awake-accent") || "cyan");
 updateWallpaper();
 const savedInterval = localStorage.getItem("awake-wallpaper-interval") || "0";
