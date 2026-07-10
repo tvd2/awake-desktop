@@ -3,6 +3,7 @@ const testButton = document.querySelector("#testButton");
 const wakeElapsed = document.querySelector("#wakeElapsed");
 const wakeStopButton = document.querySelector("#wakeStopButton");
 const wakeReadout = document.querySelector("#wakeReadout");
+const sidebarWake = document.querySelector("#sidebarWake");
 const weatherButton = document.querySelector("#weatherButton");
 const weatherStatus = document.querySelector("#weatherStatus");
 const weatherGrid = document.querySelector("#weatherGrid");
@@ -236,11 +237,13 @@ function stopTimer() {
 /* ─── Wake Lock ─── */
 function setWakeActive(active) {
   if (active) {
-    awakeCard.classList.add("compact");
+    if (awakeCard) awakeCard.classList.add("compact");
     if (wakeReadout) wakeReadout.hidden = false;
+    if (sidebarWake) sidebarWake.hidden = false;
   } else {
-    awakeCard.classList.remove("compact");
+    if (awakeCard) awakeCard.classList.remove("compact");
     if (wakeReadout) wakeReadout.hidden = true;
+    if (sidebarWake) sidebarWake.hidden = true;
   }
 }
 
