@@ -866,7 +866,7 @@ newsIntervalSelect.addEventListener("change", () => setNewsInterval(newsInterval
 themeButtons.forEach((button) =>
   button.addEventListener("click", () => setTheme(button.dataset.theme))
 );
-colorPicker.addEventListener("change", () => setAccent(colorPicker.value));
+if (colorPicker) colorPicker.addEventListener("change", () => setAccent(colorPicker.value));
 
 radioPlay.addEventListener("click", playRadio);
 radioPause.addEventListener("click", pauseRadio);

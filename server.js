@@ -1,5 +1,7 @@
 const http = require("node:http");
 const https = require("node:https");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 
@@ -9,8 +11,130 @@ const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=
 const AUTH_USER = process.env.AUTH_USER;
 const AUTH_PASS = process.env.AUTH_PASS;
 const AUTH_REALM = process.env.AUTH_REALM || "Awake Desk";
+const ADMIN_CONTROL_ENABLED = process.env.ADMIN_CONTROL_ENABLED === "true";
+const ADMIN_CONTROL_ISSUER = String(process.env.ADMIN_CONTROL_ISSUER || "").replace(/\/$/, "");
+const ADMIN_CONTROL_AUDIENCE = process.env.ADMIN_CONTROL_AUDIENCE || "admin-control:keep-awake-prod";
+const ADMIN_CONTROL_PUBLIC_KEY = process.env.ADMIN_CONTROL_PUBLIC_KEY || "";
+const ADMIN_CONTROL_KEY_ID = process.env.ADMIN_CONTROL_KEY_ID || "admin-control-ed25519-v1";
+const AUTH_COOKIE_SECURE = process.env.AUTH_COOKIE_SECURE === "true" || (process.env.NODE_ENV === "production" && process.env.AUTH_COOKIE_SECURE !== "false");
+const AUTH_DATA_DIR = path.resolve(process.env.AUTH_DATA_DIR || path.join(root, "data"));
+const AUTH_STATE_PATH = path.join(AUTH_DATA_DIR, "auth.json");
+const SESSION_COOKIE = "awake_desk_session";
+let authState = { sessionSecret: "", consumedTickets: [] };
+
+function loadAuthState() {
+  if (!ADMIN_CONTROL_ENABLED) return;
+  fs.mkdirSync(AUTH_DATA_DIR, { recursive: true });
+  try { authState = { ...authState, ...JSON.parse(fs.readFileSync(AUTH_STATE_PATH, "utf8")) }; } catch { /* First boot. */ }
+  if (!authState.sessionSecret) authState.sessionSecret = crypto.randomBytes(32).toString("base64url");
+  authState.consumedTickets = Array.isArray(authState.consumedTickets) ? authState.consumedTickets : [];
+  fs.writeFileSync(AUTH_STATE_PATH, JSON.stringify(authState, null, 2), { mode: 0o600 });
+}
+loadAuthState();
+
+function base64UrlDecode(value) { return Buffer.from(String(value).replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (String(value).length % 4)) % 4), "base64"); }
+function parseCookieHeader(header) {
+  return Object.fromEntries(String(header || "").split(";").map((part) => part.trim()).filter(Boolean).map((part) => {
+    const index = part.indexOf("=");
+    return index < 0 ? [part, ""] : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+  }));
+}
+function sessionCookie(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", authState.sessionSecret).update(encoded).digest("base64url");
+  return encoded + "." + signature;
+}
+function readSession(req) {
+  if (!ADMIN_CONTROL_ENABLED) return null;
+  const raw = parseCookieHeader(req.headers.cookie)[SESSION_COOKIE] || "";
+  const [encoded, supplied] = raw.split(".");
+  if (!encoded || !supplied) return null;
+  const expected = crypto.createHmac("sha256", authState.sessionSecret).update(encoded).digest("base64url");
+  const suppliedBuffer = Buffer.from(supplied);
+  const expectedBuffer = Buffer.from(expected);
+  if (suppliedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(suppliedBuffer, expectedBuffer)) return null;
+  try {
+    const payload = JSON.parse(base64UrlDecode(encoded).toString("utf8"));
+    return payload.exp > Math.floor(Date.now() / 1000) && payload.email ? payload : null;
+  } catch { return null; }
+}
+function setSessionCookie(res, user) {
+  const payload = { sub: user.sub, email: user.email, name: user.name, role: user.role, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 8 };
+  const parts = [`${SESSION_COOKIE}=${encodeURIComponent(sessionCookie(payload))}`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=28800"];
+  if (AUTH_COOKIE_SECURE) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+function clearSessionCookie(res) {
+  const parts = [`${SESSION_COOKIE}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (AUTH_COOKIE_SECURE) parts.push("Secure");
+  res.setHeader("Set-Cookie", parts.join("; "));
+}
+function recordConsumedTicket(ticketId) {
+  const now = Math.floor(Date.now() / 1000);
+  authState.consumedTickets = authState.consumedTickets.filter((item) => item.expiresAt > now);
+  if (authState.consumedTickets.some((item) => item.id === ticketId)) return false;
+  authState.consumedTickets.push({ id: ticketId, expiresAt: now + 120 });
+  fs.writeFileSync(AUTH_STATE_PATH, JSON.stringify(authState, null, 2), { mode: 0o600 });
+  return true;
+}
+function verifyAdminControlTicket(token) {
+  if (!ADMIN_CONTROL_ENABLED || !ADMIN_CONTROL_ISSUER || !ADMIN_CONTROL_PUBLIC_KEY) throw new Error("Admin Control SSO is not configured.");
+  const parts = String(token || "").split(".");
+  if (parts.length !== 3) throw new Error("Malformed launch ticket.");
+  const header = JSON.parse(base64UrlDecode(parts[0]).toString("utf8"));
+  const payload = JSON.parse(base64UrlDecode(parts[1]).toString("utf8"));
+  if (header.alg !== "EdDSA" || header.kid !== ADMIN_CONTROL_KEY_ID) throw new Error("Unsupported launch ticket key.");
+  if (!crypto.verify(null, Buffer.from(`${parts[0]}.${parts[1]}`), ADMIN_CONTROL_PUBLIC_KEY, base64UrlDecode(parts[2]))) throw new Error("Invalid launch ticket signature.");
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.iss !== ADMIN_CONTROL_ISSUER || payload.aud !== ADMIN_CONTROL_AUDIENCE || payload.app_id !== ADMIN_CONTROL_AUDIENCE.replace("admin-control:", "") || !payload.jti || !payload.email || !payload.exp || payload.exp <= now || payload.nbf > now || payload.exp - payload.iat > 60) throw new Error("Invalid launch ticket claims.");
+  if (!recordConsumedTicket(payload.jti)) throw new Error("Launch ticket has already been used.");
+  return { sub: String(payload.sub), email: String(payload.email).toLowerCase(), name: String(payload.name || "Member"), role: String(payload.role || "user") };
+}
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => { body += chunk; if (body.length > 64 * 1024) reject(new Error("Request body too large.")); });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+async function handleAuth(req, res, url) {
+  if (url.pathname === "/health" && req.method === "GET") {
+    sendJson(res, 200, { ok: true, service: "keep-awake" });
+    return true;
+  }
+  if (url.pathname === "/.well-known/admin-control-target.json") {
+    sendJson(res, 200, { protocolVersion: "admin-control-sso-v1", appId: ADMIN_CONTROL_AUDIENCE.replace("admin-control:", ""), handoffPath: "/auth/admin-control/handoff", healthPath: "/health", capabilities: ["admin-control-sso-v1"] });
+    return true;
+  }
+  if (url.pathname === "/auth/admin-control/handoff" && req.method === "POST") {
+    try {
+      const form = new URLSearchParams(await readRequestBody(req));
+      const user = verifyAdminControlTicket(form.get("ticket"));
+      setSessionCookie(res, user);
+      res.writeHead(303, { Location: "/", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" });
+      res.end();
+    } catch (error) { sendJson(res, 401, { error: error instanceof Error ? error.message : "Invalid launch ticket." }); }
+    return true;
+  }
+  if (url.pathname === "/auth/session" && req.method === "GET") {
+    const user = readSession(req);
+    if (!user) { sendJson(res, 401, { error: "Sign in required." }); return true; }
+    sendJson(res, 200, { user }); return true;
+  }
+  if (url.pathname === "/auth/logout" && req.method === "POST") {
+    clearSessionCookie(res); sendJson(res, 200, { ok: true }); return true;
+  }
+  return false;
+}
 
 function checkAuth(req, res) {
+  if (ADMIN_CONTROL_ENABLED) {
+    if (readSession(req)) return true;
+    res.writeHead(401, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
+    res.end("Sign in through Admin Control.");
+    return false;
+  }
   // No auth configured → public mode
   if (!AUTH_USER || !AUTH_PASS) return true;
   const auth = req.headers.authorization;
@@ -375,9 +499,12 @@ async function serveStatic(res, pathname) {
 http.createServer(async (req, res) => {
   const clientIp = getClientIp(req);
   if (isRateLimited(clientIp)) { sendJson(res, 429, { error: "Rate limit exceeded. Try again later." }); return; }
-  if (!checkAuth(req, res)) return;
   const url = new URL(req.url, "http://" + req.headers.host);
   try {
+    if (url.pathname === "/health" || url.pathname === "/.well-known/admin-control-target.json" || url.pathname.startsWith("/auth/")) {
+      if (await handleAuth(req, res, url)) return;
+    }
+    if (!checkAuth(req, res)) return;
     if (url.pathname.startsWith("/api/")) { await handleApi(req, res, url); return; }
     await serveStatic(res, url.pathname);
   } catch (error) {
