@@ -14,7 +14,7 @@ const AUTH_REALM = process.env.AUTH_REALM || "Awake Desk";
 const ADMIN_CONTROL_ENABLED = process.env.ADMIN_CONTROL_ENABLED === "true";
 const ADMIN_CONTROL_ISSUER = String(process.env.ADMIN_CONTROL_ISSUER || "").replace(/\/$/, "");
 const ADMIN_CONTROL_AUDIENCE = process.env.ADMIN_CONTROL_AUDIENCE || "admin-control:keep-awake-prod";
-const ADMIN_CONTROL_PUBLIC_KEY = process.env.ADMIN_CONTROL_PUBLIC_KEY || "";
+const ADMIN_CONTROL_PUBLIC_KEY = String(process.env.ADMIN_CONTROL_PUBLIC_KEY || "").replace(/\\n/g, "\n");
 const ADMIN_CONTROL_KEY_ID = process.env.ADMIN_CONTROL_KEY_ID || "admin-control-ed25519-v1";
 const AUTH_COOKIE_SECURE = process.env.AUTH_COOKIE_SECURE === "true" || (process.env.NODE_ENV === "production" && process.env.AUTH_COOKIE_SECURE !== "false");
 const AUTH_DATA_DIR = path.resolve(process.env.AUTH_DATA_DIR || path.join(root, "data"));
