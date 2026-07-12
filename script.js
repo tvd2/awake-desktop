@@ -3,7 +3,6 @@ const testButton = document.querySelector("#testButton");
 const wakeElapsed = document.querySelector("#wakeElapsed");
 const wakeStopButton = document.querySelector("#wakeStopButton");
 const wakeReadout = document.querySelector("#wakeReadout");
-const sidebarWake = document.querySelector("#sidebarWake");
 const weatherButton = document.querySelector("#weatherButton");
 const weatherStatus = document.querySelector("#weatherStatus");
 const weatherGrid = document.querySelector("#weatherGrid");
@@ -43,8 +42,8 @@ let shouldStayAwake = false;
 let activeCategory = "technology";
 let activeLanguage = localStorage.getItem("awake-news-language") || "en";
 let wallpaperShuffleCount = Number(localStorage.getItem("awake-wallpaper-shuffle") || 0);
-let activeTheme = localStorage.getItem("awake-theme") || "dark";
-let activeLayout = localStorage.getItem("awake-layout") || "bento";
+let activeTheme = localStorage.getItem("awake-theme") || "light";
+let activeLayout = "bento";
 let focusRotationTimer = null;
 let focusRotationIndex = 0;
 const focusSources = ["news", "deals"];
@@ -200,6 +199,7 @@ function updateLocalTabVisibility() {
 }
 
 function setTheme(theme) {
+  if (!['light', 'dark'].includes(theme)) theme = 'light';
   activeTheme = theme;
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("awake-theme", theme);
@@ -239,11 +239,9 @@ function setWakeActive(active) {
   if (active) {
     if (awakeCard) awakeCard.classList.add("compact");
     if (wakeReadout) wakeReadout.hidden = false;
-    if (sidebarWake) sidebarWake.hidden = false;
   } else {
     if (awakeCard) awakeCard.classList.remove("compact");
     if (wakeReadout) wakeReadout.hidden = true;
-    if (sidebarWake) sidebarWake.hidden = true;
   }
 }
 
