@@ -68,7 +68,7 @@ button{cursor:pointer}
 .section-head h2{margin:0;font-size:17px;letter-spacing:-.025em}
 .section-head p,.muted{margin:3px 0 0;color:var(--muted);font-size:12px}
 
-.dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
 .panel{min-width:0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:20px;box-shadow:var(--shadow)}
 .wake-panel,.wallpaper-panel{grid-column:1/-1}
 .wake-panel{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:150px;background:linear-gradient(120deg,var(--panel),var(--panel-subtle))}
