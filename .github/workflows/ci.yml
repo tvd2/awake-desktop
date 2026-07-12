@@ -67,9 +67,9 @@ jobs:
         id: tag
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=v$(date +%Y.%m.%d)" >> "$GITHUB_OUTPUT"
+            echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v$(date +%Y.%m.%d),${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up Docker Buildx
@@ -88,6 +88,6 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+          tags: ${{ steps.tag.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
