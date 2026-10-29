@@ -60,6 +60,20 @@ test('timer and radio remain in header and active across feed switches', async (
     assert.match(await x.getAttribute('rel'), /noopener/);
   } finally { await page.close(); }
 });
+test('header places theme controls before radio and wake timer at the right edge', async () => {
+  const page = await open();
+  try {
+    await page.click('#awakeStartButton');
+    const theme = await page.locator('.theme-toggle').boundingBox();
+    const radio = await page.locator('.radio-player').boundingBox();
+    const wake = await page.locator('.wake-control').boundingBox();
+    assert.ok(theme.x + theme.width <= radio.x, 'theme controls precede radio');
+    assert.ok(radio.x + radio.width <= wake.x, 'wake controls follow radio');
+    assert.equal(Math.round(wake.x + wake.width), 1408, 'timer aligns with right header padding');
+    const order = await page.locator('.header-tools').evaluate(el => [...el.children].map(child => child.className));
+    assert.deepEqual(order, ['theme-toggle', 'radio-player', 'wake-control compact']);
+  } finally { await page.close(); }
+});
 test('feed disclosure reveals five more, keyboard selects tabs and refresh resets limit', async () => {
   const page = await open();
   try {

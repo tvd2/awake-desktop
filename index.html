@@ -13,16 +13,16 @@
   <header class="topbar">
     <a class="brand" href="./" aria-label="Awake Desk home"><span class="brand-mark" aria-hidden="true">☼</span>Awake Desk</a>
     <div class="header-tools">
-      <div class="wake-control" id="awake" aria-label="Keep screen awake">
-        <button id="awakeStartButton" class="button primary" type="button"><span>Keep awake</span></button>
-        <div class="wake-readout" id="wakeReadout" hidden><span class="status-dot" aria-hidden="true"></span><strong id="wakeElapsed" aria-label="Time awake">00:00:00</strong><button id="wakeStopButton" class="button secondary" type="button">Stop</button></div>
-      </div>
+      <div class="theme-toggle" aria-label="Theme mode"><button class="theme-option" type="button" data-theme="light" aria-label="Use light theme" title="Light theme">☼</button><button class="theme-option" type="button" data-theme="dark" aria-label="Use dark theme" title="Dark theme">☾</button></div>
       <div class="radio-player" aria-label="Radio player">
         <audio id="radioAudio" preload="none"></audio>
         <div class="radio-controls"><select id="radioChannel" aria-label="Radio station"></select><button id="radioPlay" class="icon-button" type="button" aria-label="Play radio" title="Play radio">▷</button><button id="radioPause" class="icon-button" type="button" aria-label="Pause radio" title="Pause radio" hidden>Ⅱ</button><button id="radioReset" class="icon-button" type="button" aria-label="Return to playing station" title="Return to playing station" hidden>↶</button><button id="radioMute" class="icon-button" type="button" aria-label="Mute" title="Mute"><svg id="muteIcon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M17 8a6 6 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
         <p class="radio-status" id="radioStatus" role="status">Loading stations…</p>
       </div>
-      <div class="theme-toggle" aria-label="Theme mode"><button class="theme-option" type="button" data-theme="light" aria-label="Use light theme" title="Light theme">☼</button><button class="theme-option" type="button" data-theme="dark" aria-label="Use dark theme" title="Dark theme">☾</button></div>
+      <div class="wake-control" id="awake" aria-label="Keep screen awake">
+        <button id="awakeStartButton" class="button primary" type="button"><span>Keep awake</span></button>
+        <div class="wake-readout" id="wakeReadout" hidden><span class="status-dot" aria-hidden="true"></span><strong id="wakeElapsed" aria-label="Time awake">00:00:00</strong><button id="wakeStopButton" class="button secondary" type="button">Stop</button></div>
+      </div>
     </div>
   </header>
   <main class="content">
