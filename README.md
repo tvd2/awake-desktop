@@ -8,7 +8,10 @@ A single-page utility dashboard that keeps your screen awake while showing weath
 - **Weather** — 5-day local forecast via browser geolocation and [Open-Meteo](https://open-meteo.com/). Location names resolved with BigDataCloud reverse geocoding.
 - **News** — Curated headlines from public, no-paywall sources via Google News RSS. Browse by category (technology, science, world, business, health, sports, entertainment, local) and language (10 languages supported). Local news intelligently sources from country-specific outlets.
 - **Wallpaper** — Seeded, theme-matched desktop wallpaper suggestions from [Lorem Picsum](https://picsum.photos/) with notes on visual composition.
-- **Theming** — Three themes (light, dark, mid) and four accent colors (green, blue, rose, amber). Preferences persist in `localStorage`.
+- **Feed tabs** — Switch between News and OzBargain without interrupting wake lock or radio. Each feed starts with five entries; **Show more** reveals additional entries. The **X ↗** link opens `x.com/home` in a new browser tab using your existing X session, not an embedded timeline.
+- **Persistent controls** — The active wake-lock timer, Stop button, and radio station/play/pause/mute controls live in the sticky app header.
+- **Compact layout** — Desktop feed and wallpaper columns become a single column on mobile. Weather expands on demand.
+- **Theming** — Light and dark modes with a restrained green accent. Preferences persist in `localStorage`.
 
 ## Stack
 
@@ -19,7 +22,7 @@ A single-page utility dashboard that keeps your screen awake while showing weath
 | Container | Docker (`node:22-alpine`) |
 | External APIs | Open-Meteo, BigDataCloud, Google News RSS, Lorem Picsum |
 
-No build tools, no bundler, no npm packages in the client. The entire frontend is three files (~31 KB).
+No build tools, no bundler, no npm packages in the client. The frontend is plain HTML, CSS and two small browser scripts; no build step is required.
 
 ## Running locally
 
@@ -79,13 +82,29 @@ Static assets are served from the filesystem with correct MIME types and securit
 .
 ├── index.html          # Single-page markup
 ├── styles.css          # Theme system, layout, components (~10 KB)
-├── script.js           # Wake lock, weather, news, wallpaper logic (~12 KB)
+├── script.js           # Wake lock, radio, weather, news and wallpaper integrations
+├── dashboard.js        # Feed tab navigation and progressive disclosure
+├── tests/              # Browser regression tests
 ├── server.js           # Node.js static server + API proxy (~6 KB)
 ├── Dockerfile          # Alpine Node image, single-stage
 ├── docker-compose.yml  # Service definition
 ├── nginx.conf          # Nginx config (for deployments using nginx instead of Node)
 └── docs/               # Documentation and screenshots (not tracked)
 ```
+
+## Frontend verification
+
+Browser regression tests require Node.js and Playwright with Chromium installed (development only):
+
+```bash
+npm install --no-save --package-lock=false playwright
+npx playwright install chromium
+node --test tests/dashboard.test.cjs
+node --check script.js
+node --check dashboard.js
+```
+
+Tests exercise feed navigation, keyboard controls, disclosure and refresh, sticky timer/radio behavior, themes, wallpaper actions, manual weather and responsive overflow at 1440, 768, 390 and 320px. External feeds, geolocation, wake lock and media playback use controlled fixtures; real service availability and audio output still require a browser check. Set `SCREENSHOTS=1` to save layout captures under `/tmp/awake-desk-<width>.png`.
 
 ## Deployment notes
 
