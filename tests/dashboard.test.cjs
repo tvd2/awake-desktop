@@ -55,9 +55,36 @@ test('timer and radio remain in header and active across feed switches', async (
     assert.equal(await page.locator('#radioAudio').evaluate(el => el.muted), true);
     await page.click('#wakeStopButton');
     assert.equal(await page.locator('#awakeStartButton').isVisible(), true);
-    const x = page.locator('a[href="https://x.com/home"]');
-    assert.equal(await x.getAttribute('target'), '_blank');
-    assert.match(await x.getAttribute('rel'), /noopener/);
+    assert.equal(await page.locator('a[href="https://x.com/home"]').count(), 0);
+    assert.deepEqual(await page.locator('.feed-nav [role="tab"]').allTextContents(), ['News', 'OzBargain']);
+  } finally { await page.close(); }
+});
+test('feed rows have distinct theme-aware tints and radio text stays inside its frame', async () => {
+  const page = await open(390);
+  try {
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => setTheme(theme), theme);
+      for (const feed of ['news', 'deals']) {
+        await page.click(`[data-feed-tab="${feed}"]`);
+        const backgrounds = await page.locator(`#${feed}List article`).evaluateAll(rows => rows.slice(0, 4).map(row => getComputedStyle(row).backgroundColor));
+        assert.equal(new Set(backgrounds).size, 4, `${theme} ${feed}: four distinct row tints`);
+        assert.ok(backgrounds.every(color => color !== 'rgba(0, 0, 0, 0)'), 'rows have explicit backgrounds');
+      }
+      const radio = await page.locator('#radioChannel').evaluate(select => {
+        select.options[0].textContent = 'ABC Classic — Sydney, New South Wales';
+        const style = getComputedStyle(select);
+        const option = getComputedStyle(select.options[0]);
+        return { background: style.backgroundColor, color: style.color, optionBackground: option.backgroundColor, optionColor: option.color, left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight), height: select.getBoundingClientRect().height, scheme: style.colorScheme };
+      });
+      assert.ok(radio.left >= 10 && radio.right >= 24, 'station text is inset from border and arrow');
+      assert.ok(radio.height >= 44);
+      assert.notEqual(radio.background, 'rgba(0, 0, 0, 0)');
+      assert.notEqual(radio.optionBackground, 'rgba(0, 0, 0, 0)');
+      assert.equal(radio.color, radio.optionColor);
+      assert.equal(radio.scheme, theme);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      if (process.env.SCREENSHOTS) await page.screenshot({ path: `/tmp/awake-styling-${theme}.png`, fullPage: true });
+    }
   } finally { await page.close(); }
 });
 test('header places theme controls before radio and wake timer at the right edge', async () => {

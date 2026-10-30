@@ -8,7 +8,7 @@ A single-page utility dashboard that keeps your screen awake while showing weath
 - **Weather** — 5-day local forecast via browser geolocation and [Open-Meteo](https://open-meteo.com/). Location names resolved with BigDataCloud reverse geocoding.
 - **News** — Curated headlines from public, no-paywall sources via Google News RSS. Browse by category (technology, science, world, business, health, sports, entertainment, local) and language (10 languages supported). Local news intelligently sources from country-specific outlets.
 - **Wallpaper** — Seeded, theme-matched desktop wallpaper suggestions from [Lorem Picsum](https://picsum.photos/) with notes on visual composition.
-- **Feed tabs** — Switch between News and OzBargain without interrupting wake lock or radio. Each feed starts with five entries; **Show more** reveals additional entries. The **X ↗** link opens `x.com/home` in a new browser tab using your existing X session, not an embedded timeline.
+- **Feed tabs** — Switch between News and OzBargain without interrupting wake lock or radio. Each feed starts with five entries; **Show more** reveals additional entries. Rows cycle through subtle, theme-aware background colors for easier scanning. X integration is deferred.
 - **Persistent controls** — The active wake-lock timer, Stop button, and radio station/play/pause/mute controls live in the sticky app header.
 - **Compact layout** — Desktop feed and wallpaper columns become a single column on mobile. Weather expands on demand.
 - **Theming** — Light and dark modes with a restrained green accent. Preferences persist in `localStorage`.
