@@ -711,6 +711,11 @@ function syncRadioButtons() {
   const isPlaying = radioAudio && !radioAudio.paused && radioAudio.src;
   const hasPlayed = playingChannelIndex !== -1;
   const isDropdownMatch = currentChannelIndex === playingChannelIndex;
+  Array.from(radioGenre.options).forEach((option, index) => {
+    const title = radioChannels[index]?.title || "";
+    option.textContent = isPlaying && index === playingChannelIndex ? "Playing · " + title : title;
+  });
+  radioGenre.title = radioGenre.selectedOptions[0]?.textContent || "Radio station";
 
   if (isPlaying && isDropdownMatch) {
     radioPlay.hidden = true;

@@ -25,7 +25,7 @@ async function open(width = 1440) {
   await page.route('**/api/**', route => {
     const url = route.request().url();
     if (url.includes('/weather')) return route.fulfill({ json: { daily: { time: ['2026-07-17', '2026-07-18', '2026-07-19', '2026-07-20', '2026-07-21'], weather_code: [0, 1, 2, 3, 61], temperature_2m_max: [21, 22, 23, 24, 20], temperature_2m_min: [12, 13, 14, 15, 11], wind_speed_10m_max: [10, 11, 12, 13, 14], precipitation_probability_max: [0, 0, 0, 0, 20] } } });
-    const data = url.includes('/radio') ? [{ title: 'Test Jazz', playlists: [{ url: 'https://example.com/live.mp3', format: 'mp3' }] }] : Array.from({ length: 18 }, (_, i) => ({ title: `Story ${i + 1}`, url: `https://example.com/${i}`, source: 'Public source', creator: 'Community', publishedAt: new Date().toISOString() }));
+    const data = url.includes('/radio') ? [{ title: 'Test Jazz', playlists: [{ url: 'https://example.com/live.mp3', format: 'mp3' }] }, { title: 'Test Classical', playlists: [{ url: 'https://example.com/classical.mp3', format: 'mp3' }] }] : Array.from({ length: 18 }, (_, i) => ({ title: `Story ${i + 1}`, url: `https://example.com/${i}`, source: 'Public source', creator: 'Community', publishedAt: new Date().toISOString() }));
     return route.fulfill({ json: data });
   });
   await page.addInitScript(() => {
@@ -67,7 +67,9 @@ test('feed rows have distinct theme-aware tints and radio text stays inside its 
       for (const feed of ['news', 'deals']) {
         await page.click(`[data-feed-tab="${feed}"]`);
         const backgrounds = await page.locator(`#${feed}List article`).evaluateAll(rows => rows.slice(0, 4).map(row => getComputedStyle(row).backgroundColor));
-        assert.equal(new Set(backgrounds).size, 4, `${theme} ${feed}: four distinct row tints`);
+        assert.equal(new Set(backgrounds).size, 2, `${theme} ${feed}: two alternating row tints`);
+        assert.equal(backgrounds[0], backgrounds[2]);
+        assert.equal(backgrounds[1], backgrounds[3]);
         assert.ok(backgrounds.every(color => color !== 'rgba(0, 0, 0, 0)'), 'rows have explicit backgrounds');
       }
       const radio = await page.locator('#radioChannel').evaluate(select => {
@@ -85,6 +87,30 @@ test('feed rows have distinct theme-aware tints and radio text stays inside its 
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       if (process.env.SCREENSHOTS) await page.screenshot({ path: `/tmp/awake-styling-${theme}.png`, fullPage: true });
     }
+  } finally { await page.close(); }
+});
+test('radio playback label appears only inside the station selector', async () => {
+  const page = await open();
+  try {
+    const selected = page.locator('#radioChannel option:checked');
+    assert.equal(await selected.textContent(), 'Test Jazz');
+    const status = await page.locator('#radioStatus').boundingBox();
+    assert.ok(!status || (status.width <= 1 && status.height <= 1), 'no visible status line below selector');
+    await page.click('#radioPlay');
+    assert.equal(await selected.textContent(), 'Playing · Test Jazz');
+    await page.selectOption('#radioChannel', '1');
+    assert.equal(await selected.textContent(), 'Test Classical');
+    assert.equal(await page.locator('#radioChannel option').first().textContent(), 'Playing · Test Jazz');
+    await page.click('#radioReset');
+    assert.equal(await selected.textContent(), 'Playing · Test Jazz');
+    await page.click('#radioPause');
+    assert.equal(await selected.textContent(), 'Test Jazz');
+    await page.click('#radioPlay');
+    assert.equal(await selected.textContent(), 'Playing · Test Jazz');
+    await page.selectOption('#radioChannel', '1');
+    await page.click('#radioPlay');
+    assert.equal(await selected.textContent(), 'Playing · Test Classical');
+    assert.equal(await page.locator('#radioChannel option').first().textContent(), 'Test Jazz');
   } finally { await page.close(); }
 });
 test('header places theme controls before radio and wake timer at the right edge', async () => {
